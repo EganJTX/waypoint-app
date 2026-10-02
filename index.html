@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Waypoint</title>
+<link rel="icon" href="assets/logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<!-- ============================================================
+     Top bar — shared across all three views
+     ============================================================ -->
+<header class="topbar">
+  <a class="brand" href="#presentation" data-nav="presentation">
+    <svg class="brand-mark" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M12 2C7.58 2 4 5.58 4 10c0 5.25 6.58 11.54 7.06 11.96a1.5 1.5 0 0 0 1.88 0C13.42 21.54 20 15.25 20 10c0-4.42-3.58-8-8-8z" fill="var(--brand-icon-blue)"/>
+      <text x="12" y="14.2" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="11" fill="var(--slate)">$</text>
+    </svg>
+    <span class="brand-name">Waypoint</span>
+  </a>
+  <nav class="topnav">
+    <a href="#data" data-nav="data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M12 19V5M20 19v-7"/></svg>
+      Data
+    </a>
+    <a href="#configuration" data-nav="configuration">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configuration
+    </a>
+    <span class="avatar" id="avatar-initials">--</span>
+  </nav>
+</header>
+
+<!-- ============================================================
+     PRESENTATION — primary view
+     ============================================================ -->
+<main id="view-presentation">
+
+  <div class="hero has-photo" id="hero">
+    <img class="hero-photo" src="assets/hero.png" alt="" />
+    <div class="hero-content">
+      <div class="hero-eyebrow" id="hero-eyebrow">GOOD MORNING</div>
+      <h1 class="hero-heading">Your future looks<br/>brighter with a plan.</h1>
+      <p class="hero-sub" id="hero-sub">Here's where you stand, and what to keep an eye on.</p>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <!-- KPI row -->
+    <!-- Standing + desire — facts about today, and facts about what you
+         told Waypoint you want. No card here computes a delta between them;
+         Trajectory is the one place the two meet, and even there it's a
+         choice-point, not a verdict (see renderPresentation in app.js). -->
+    <section class="kpi-row">
+      <div class="card kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-label">Current Retirement Savings</div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg></div>
+        </div>
+        <div class="kpi-value" id="kpi-savings">$--</div>
+        <div class="kpi-foot" id="kpi-savings-foot">Starting base across all retirement vehicles</div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-label">Desired Retirement Age</div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/></svg></div>
+        </div>
+        <div class="kpi-value" id="kpi-desired-age">--</div>
+        <div class="kpi-foot" id="kpi-desired-age-foot">What you told Waypoint you're aiming for</div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-label">Desired Annual Income</div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg></div>
+        </div>
+        <div class="kpi-value" id="kpi-desired-income">$--</div>
+        <div class="kpi-foot" id="kpi-desired-income-foot">In today's dollars</div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-label">Trajectory</div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c4-2 7-6 7-11a7 7 0 0 0-14 0c0 5 3 9 7 11Z"/><path d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg></div>
+        </div>
+        <div class="kpi-value" id="kpi-status">--</div>
+        <div class="kpi-foot" id="kpi-status-foot">--</div>
+      </div>
+    </section>
+
+    <!-- Projection + Portfolio -->
+    <section class="mid-row">
+      <div class="card panel">
+        <div class="panel-head">
+          <div class="panel-title">Retirement Projection</div>
+          <div class="legend-inline">
+            <span><span class="dot solid"></span>Median (250 simulations)</span>
+            <span><span class="swatch-band"></span>Middle 60% of outcomes</span>
+            <span><span class="dot dashed"></span>Target</span>
+          </div>
+        </div>
+        <div class="chart-wrap" id="chart-wrap">
+          <canvas id="projection-chart"></canvas>
+          <div class="chart-callout hidden" id="chart-callout"></div>
+        </div>
+      </div>
+
+      <div class="card panel">
+        <div class="panel-head">
+          <div class="panel-title">Your Portfolio</div>
+          <div class="portfolio-toggle-group" id="portfolio-toggle-group">
+            <button class="toggle-option active" data-view="current">Current</button>
+            <button class="toggle-option" data-view="projected">Projected</button>
+          </div>
+        </div>
+        <div class="portfolio-wrapper" style="display:flex; align-items:center; gap:24px; min-height:280px;">
+          <div class="portfolio-total" style="flex:1;">
+            <canvas id="portfolio-chart"></canvas>
+            <div class="portfolio-total-label" id="portfolio-total-label" style="opacity:0; transition:opacity 0.3s;">
+              <div class="portfolio-total-category" id="portfolio-total-category" style="font-size:12px; color:#999; margin-bottom:4px;">--</div>
+              <div class="portfolio-total-value" id="portfolio-total-value">$--</div>
+            </div>
+          </div>
+          <div class="legend-list" id="portfolio-legend" style="flex:0 0 auto;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Current projected reality — the detail standing behind the
+         Trajectory verdict above. Every dollar figure is explicitly
+         labeled future vs. today's dollars; nothing here restates a card
+         from the top row, and nothing computes a gap. -->
+    <section class="metric-row">
+      <div class="card metric-card">
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg></div>
+        <div class="metric-body">
+          <div class="metric-label">Projected Balance at Retirement</div>
+          <div class="metric-value" id="metric-projected-balance">$--</div>
+          <div class="metric-caption" id="metric-projected-balance-caption">at age 72</div>
+        </div>
+      </div>
+
+      <div class="card metric-card">
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+        <div class="metric-body">
+          <div class="metric-label">Current Projected Retirement Age</div>
+          <div class="metric-value" id="metric-projected-age">--</div>
+          <div class="metric-caption">At your current pace</div>
+        </div>
+      </div>
+
+      <div class="card metric-card">
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg></div>
+        <div class="metric-body">
+          <div class="metric-label">Projected Annual Withdrawal</div>
+          <div class="metric-value" id="metric-projected-income">$--</div>
+          <div class="metric-caption" id="metric-projected-income-caption">per year at retirement</div>
+        </div>
+      </div>
+
+      <div class="card metric-card">
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg></div>
+        <div class="metric-body">
+          <div class="metric-label">
+            Withdrawal Capacity Range
+            <span class="metric-info-icon" title="Range includes 5% withdrawal from portfolio plus discounted Social Security at the high end">ⓘ</span>
+          </div>
+          <div class="metric-value" id="metric-withdrawal-range">$-- – $--</div>
+          <div class="metric-caption" id="metric-withdrawal-range-caption">at 4–5% annual withdrawal</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Coach panel -->
+    <section class="coach-panel">
+      <div class="coach-col-main">
+        <div class="coach-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        </div>
+        <div>
+          <div class="coach-eyebrow">Your Financial Coach</div>
+          <h2 class="coach-heading" id="coach-name-heading">Ready for your first analysis.</h2>
+          <p class="coach-body">
+            Analysis will display here once you run your first analysis.
+          </p>
+        </div>
+      </div>
+
+      <div class="coach-col-recs">
+        <div class="coach-recs-title">What I'd consider</div>
+        <p style="color: #999; font-size: 13px; margin: 12px 0;">Recommendations will appear once you run your first analysis.</p>
+      </div>
+
+      <div class="coach-col-cta">
+        <div class="coach-cta-top">
+          <button class="btn-amber" id="run-analysis-btn">
+            Run a new analysis
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <a href="#" class="coach-scenarios-link">Review full analysis &rsaquo;</a>
+        </div>
+        <div class="coach-tip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2Z"/></svg>
+          <span>You're not just building wealth — you're building options.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- ============================================================
+     DATA — vehicle table + check-in log (setup tab)
+     ============================================================ -->
+<main id="view-data" class="hidden">
+  <div class="page-body">
+    <div class="util-header">
+      <h1 class="util-title">Data</h1>
+      <p class="util-sub">Your retirement vehicles and check-in history. Update this whenever balances change.</p>
+    </div>
+
+    <div class="card util-panel">
+      <div class="util-panel-title-row">
+        <div class="util-panel-title">Retirement Vehicles</div>
+        <span class="th-help" tabindex="0" aria-label="What do these fields mean?"><span class="th-tip th-tip-wide">
+          <strong>Company</strong> — the provider/institution (e.g. Fidelity).<br/>
+          <strong>Account Name</strong> — a label to tell accounts apart (e.g. "401(k)" vs "Roth IRA").<br/>
+          <strong>Category</strong> — groups this vehicle for the portfolio breakdown (Investment / Insurance / Checking/Savings). Organizational only — doesn't affect the math.<br/>
+          <strong>Benefit</strong> — payout if cashed out/claimed today. Net-worth context only, not counted in the projection. Only editable for Insurance — for every other category it's the same number as the account's balance, so it's shown as "—" and kept in sync automatically from Log a Check-in.<br/>
+          <strong>Contribution — Amount / Frequency</strong> — how much you add on a recurring basis, and how often. Leave Amount at 0 for irregular accounts.<br/>
+          <strong>Contribution — Adds to Retirement Cash?</strong> — check this only if the contribution itself builds cash value that counts toward RCV (e.g. whole life premiums). Leave unchecked if it's a pure cost with no accreting value (e.g. term life premiums), or if this is a regular market account (the contribution already flows into RCV growth directly).
+        </span></span>
+      </div>
+      <p class="util-panel-desc">Retirement Cash Value (RCV) — a vehicle's current balance — drives the projection math, and is set and updated entirely through Log a Check-in below, never here. A vehicle whose balance is $0 (and stays $0) is treated as protection-only and excluded from the projection, but still shown for full net-worth context via Benefit.</p>
+      <div class="vehicle-tables-wrap">
+        <div class="vehicle-table-col" style="overflow-x:auto;">
+          <div class="data-table-group-label">Account</div>
+          <table class="data-table" id="vehicles-table-account">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Account Name</th>
+                <th>Category</th>
+                <th>Benefit</th>
+              </tr>
+            </thead>
+            <tbody id="vehicles-tbody-account"></tbody>
+          </table>
+        </div>
+        <div class="table-divider" aria-hidden="true"></div>
+        <div class="vehicle-table-col" style="overflow-x:auto;">
+          <div class="data-table-group-label">Contribution</div>
+          <table class="data-table" id="vehicles-table-contribution">
+            <thead>
+              <tr>
+                <th>Amount</th>
+                <th>Frequency</th>
+                <th>Adds to Retirement Cash?</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="vehicles-tbody-contribution"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="actions-row">
+        <button class="btn-secondary" id="add-vehicle-btn">+ Add vehicle</button>
+        <button class="btn-primary" id="save-vehicles-btn">Save changes</button>
+      </div>
+    </div>
+
+    <div class="card util-panel">
+      <div class="util-panel-title">Log a Check-in</div>
+      <p class="util-panel-desc">Record today's balances as a snapshot. Quarterly is a good cadence, but log any time something changes. Only vehicles with a balance that can actually move show up here — protection-only policies (like term life) are configured once above and never need a balance update.</p>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="checkin-table">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Account Name</th>
+              <th>Category</th>
+              <th>Last Recorded Balance</th>
+              <th>New Balance (today)</th>
+            </tr>
+          </thead>
+          <tbody id="checkin-tbody"></tbody>
+        </table>
+      </div>
+      <div class="actions-row">
+        <button class="btn-primary" id="save-checkin-btn">Save check-in</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============================================================
+     CONFIGURATION — set-once settings (setup tab)
+     ============================================================ -->
+<main id="view-configuration" class="hidden">
+  <div class="page-body">
+
+    <!-- Interview wizard — first-time setup, or editing a single answer
+         re-opened from the summary below. -->
+    <div class="wizard-wrap hidden" id="config-wizard">
+      <div class="wizard-card">
+        <button class="wizard-close-btn" id="wizard-close-btn" title="Close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="wizard-progress" id="wizard-progress"></div>
+        <div class="wizard-question" id="wizard-question"></div>
+        <p class="wizard-sub" id="wizard-sub"></p>
+        <div class="wizard-input-area" id="wizard-input-area"></div>
+        <div class="wizard-nav">
+          <button class="btn-secondary" id="wizard-back-btn">Back</button>
+          <div style="flex:1"></div>
+          <button class="btn-primary" id="wizard-next-btn">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary — what you land on once setup is done. Click any
+         highlighted word in the paragraph to change just that answer, or
+         use the wand to walk through everything again. -->
+    <div class="hidden" id="config-summary">
+      <div class="util-header">
+        <div class="paragraph-header-row">
+          <h1 class="util-title">Configuration</h1>
+          <button class="wand-btn" id="wizard-restart-btn" title="Walk through everything again" aria-label="Walk through everything again">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M15 9h0M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/></svg>
+          </button>
+        </div>
+        <p class="util-sub">Click any highlighted word to change it, or use the wand to walk through everything again.</p>
+      </div>
+
+      <div class="card plan-paragraph-card">
+        <p class="plan-paragraph" id="plan-paragraph"></p>
+      </div>
+
+      <div class="card util-panel">
+        <div class="util-panel-title">Notes for Your Coach</div>
+        <p class="util-panel-desc">Standing context that doesn't change often and isn't a number above — an expected inheritance you haven't factored in, a pension, a health consideration, a plan to change jobs. This is background the coach can keep in mind, not "what's on my mind today" — we'll ask that separately, in the moment, once the coach is wired up.</p>
+        <textarea id="cfg-coach-notes" rows="4" placeholder="e.g. I'll likely inherit some amount from my parents eventually, but I don't know how much, when, or which account to route it into."></textarea>
+        <div class="actions-row">
+          <button class="btn-primary" id="save-notes-btn">Save notes</button>
+        </div>
+      </div>
+
+      <div class="card util-panel">
+        <button class="advanced-toggle" id="advanced-toggle" aria-expanded="false">
+          <span class="util-panel-title" style="margin:0;">Advanced</span>
+          <svg class="advanced-chevron" id="advanced-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="advanced-body hidden" id="advanced-body">
+          <p class="util-panel-desc">The knobs behind the projection math. Most people won't need to touch these.</p>
+
+          <div class="advanced-section">
+            <div class="advanced-section-title-row">
+              <div class="advanced-section-title">Projection Rates</div>
+              <span class="th-help" tabindex="0" aria-label="What do these rates mean?"><span class="th-tip th-tip-wide">
+                <strong>Minimum annual rate</strong> — the low end of the random walk used for market vehicles (401(k), IRA, brokerage, etc.) each simulated year. A worse-than-usual year in your plan won't go below this.<br/>
+                <strong>Maximum annual rate</strong> — the high end of that same random walk. A better-than-usual year won't go above this. Each simulated year draws a rate somewhere between Min and Max — not one fixed rate for the whole projection.<br/>
+                <strong>Upside rate</strong> — a separate, single flat rate (no year-to-year randomness) used only for the "if performance runs ahead of plan" reference line — not part of the Min/Max random walk. Nothing forces it above Max; for it to genuinely read as "upside," it should be set higher than Max, but the app won't stop you from setting it lower.
+              </span></span>
+            </div>
+            <p class="util-panel-desc">Single random-path projection between Min and Max, drawn per vehicle per year (not multi-trial Monte Carlo). Upside is shown as a secondary "ahead of plan" line.</p>
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Minimum annual rate</label>
+                <input type="number" step="0.001" id="cfg-rate-min" />
+              </div>
+              <div class="form-field">
+                <label>Maximum annual rate</label>
+                <input type="number" step="0.001" id="cfg-rate-max" />
+              </div>
+              <div class="form-field">
+                <label>Upside rate</label>
+                <input type="number" step="0.001" id="cfg-rate-upside" />
+              </div>
+            </div>
+          </div>
+
+          <div class="advanced-section">
+            <div class="advanced-section-title">Inflation</div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Assumed inflation rate</label>
+                <input type="number" step="0.001" id="cfg-inflation" />
+                <div class="form-hint">Used to show today's-dollars equivalent alongside the nominal figure.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions-row">
+            <button class="btn-primary" id="save-config-btn">Save configuration</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- Single-question edit modal — opened by clicking a highlighted word in
+     the plan paragraph. -->
+<div class="modal-overlay hidden" id="field-modal-overlay">
+  <div class="modal-card">
+    <div class="wizard-question" id="modal-question"></div>
+    <p class="wizard-sub" id="modal-sub"></p>
+    <div class="wizard-input-area" id="modal-input-area"></div>
+    <div class="wizard-nav">
+      <button class="btn-secondary" id="modal-cancel-btn">Cancel</button>
+      <div style="flex:1"></div>
+      <button class="btn-primary" id="modal-save-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="save-toast" id="save-toast">Saved</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

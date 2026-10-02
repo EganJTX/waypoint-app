@@ -1,0 +1,24 @@
+{
+  "household": [
+    {
+      "name": "John",
+      "dateOfBirth": "1984-01-01"
+    }
+  ],
+  "destinationNumber": 1650000,
+  "destinationNumberHelper": {
+    "desiredAnnualIncome": 90000,
+    "socialSecurityEstimate": 24000,
+    "useHelper": false
+  },
+  "targetRetirementAge": 65,
+  "projectionRates": {
+    "min": 0.04,
+    "max": 0.1,
+    "upside": 0.08
+  },
+  "inflationRate": 0.025,
+  "coachTone": "centered",
+  "coachNotes": "*Primary note/strategy from my advisor\nA 4% withdrawal rule is a reasonable starting point. If you have $1.65M and draw 4% ($66k) alongside Social Security, that covers the $90k target. Plan for the conservative case and be pleasantly surprised if markets cooperate.\n\n*Vehicle Notes\nTerm Life - pure protection while the kids are young, no cash value\nWhole Life - cash value builds tax-deferred, can borrow against it if needed\nJohnny's College Fund - savings earmarked for Johnny's tuition, college starts in about 10 years, not part of the retirement plan in spirit\n401k - the main growth engine\n\n*To Dos\nContribute to the 401k at least up to the full employer match first\nThen keep funding the Whole Life cash value",
+  "userConcerns": "I feel slightly behind on saving for my own retirement, but I know I have a pretty solid plan for Johnny in his college fund. He starts college in about 10 years. I am starting to wonder whether I should put even more into the college fund, or whether I should be increasing my 401k contributions instead, or some blend of the two. My spouse also wants to keep our checking and savings liquid in case something happens."
+}

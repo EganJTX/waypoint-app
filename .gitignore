@@ -1,0 +1,27 @@
+# Real personal financial data — lives locally only, never committed.
+# Fresh clones get config.json bootstrapped from config.example.json by server.js.
+# data.json intentionally starts empty and is created on first write.
+# coachAnalyses.json contains user-specific coach recommendations and analysis history.
+/config.json
+/data.json
+/coachAnalyses.json
+
+# Internal project notes and planning (not for public repo)
+Requirements/
+
+# Dependencies
+node_modules/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+
+# Accidental artifacts (files with full paths as filenames)
+C:*
+
+# Debug logs and editor backups (logs can contain real projected balances)
+*.log
+*.bak
+
+# Local Claude Code permissions (machine-specific)
+.claude/settings.local.json

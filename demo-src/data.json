@@ -1,0 +1,73 @@
+{
+  "vehicles": [
+    {
+      "id": "veh_jd_chk",
+      "company": "Chase Bank",
+      "vehicle": "Checking",
+      "category": "Checking/Savings",
+      "benefit": 5678.32,
+      "retirementCashValue": 5678.32,
+      "contribution": 0,
+      "period": "",
+      "addsToRetirementValue": false
+    },
+    {
+      "id": "veh_jd_sav",
+      "company": "Chase Bank",
+      "vehicle": "Savings",
+      "category": "Checking/Savings",
+      "benefit": 10412.95,
+      "retirementCashValue": 10412.95,
+      "contribution": 750,
+      "period": "Monthly",
+      "addsToRetirementValue": false
+    },
+    {
+      "id": "veh_jd_term",
+      "company": "Guardian",
+      "vehicle": "Term Life",
+      "category": "Insurance",
+      "benefit": 1000000,
+      "retirementCashValue": 0,
+      "contribution": 900,
+      "period": "Annually",
+      "addsToRetirementValue": false
+    },
+    {
+      "id": "veh_jd_whole",
+      "company": "Guardian",
+      "vehicle": "Whole Life",
+      "category": "Insurance",
+      "benefit": 500000,
+      "retirementCashValue": 43000,
+      "contribution": 500,
+      "period": "Monthly",
+      "addsToRetirementValue": true
+    },
+    {
+      "id": "veh_jd_401k",
+      "company": "Fidelity",
+      "vehicle": "401k",
+      "category": "Investment",
+      "benefit": 126472,
+      "retirementCashValue": 126472,
+      "contribution": 500,
+      "period": "Monthly",
+      "addsToRetirementValue": false
+    },
+    {
+      "id": "veh_jd_529",
+      "company": "Fidelity",
+      "vehicle": "Johnny's College Fund",
+      "category": "Checking/Savings",
+      "benefit": 35000,
+      "retirementCashValue": 35000,
+      "contribution": 250,
+      "period": "Monthly",
+      "addsToRetirementValue": false
+    }
+  ],
+  "snapshots": [],
+  "assessments": [],
+  "currentProjection": null
+}

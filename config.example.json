@@ -1,0 +1,18 @@
+{
+  "household": [],
+  "destinationNumber": 0,
+  "destinationNumberHelper": {
+    "desiredAnnualIncome": 0,
+    "socialSecurityEstimate": 0,
+    "useHelper": false
+  },
+  "targetRetirementAge": 0,
+  "projectionRates": {
+    "min": 0.04,
+    "max": 0.10,
+    "upside": 0.08
+  },
+  "inflationRate": 0.025,
+  "coachTone": "centered",
+  "coachNotes": ""
+}

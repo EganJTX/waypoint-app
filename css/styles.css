@@ -1,0 +1,1284 @@
+/* ============================================================
+   Waypoint — design tokens
+   Palette + roles per Requirements/Waypoint - Visual Brief.md
+   ============================================================ */
+:root {
+  /* Primary environment */
+  --slate: #2B3440;
+  /* Secondary blue-gray */
+  --blue-gray: #6B7C8C;
+  --blue-gray-soft: rgba(107, 124, 140, 0.35);
+
+  /* Cards/surfaces "pulled forward from Slate" — per the Visual Brief,
+     Medium Blue is what does that pulling (secondary surfaces, supporting
+     cards, dividers), so these are Slate blended toward --blue-gray, not
+     an unrelated invented navy. */
+  --slate-surface: #394451;   /* Slate + ~22% Medium Blue */
+  --slate-surface-2: #414C5A; /* Slate + ~34% Medium Blue — nested surfaces */
+  --slate-border: rgba(107, 124, 140, 0.30); /* Medium Blue — "Dividers" role */
+
+  /* Light information blue */
+  --light-blue: #D7E1EA;
+  --light-blue-soft: rgba(215, 225, 234, 0.16);
+
+  /* Brand mark only — same hues as --blue-gray (~209°) and --light-blue
+     (~208°) but with saturation raised (13%→50%, 31%→58%). At the palette's
+     literal (deliberately restrained) saturation, the logo read as gray in
+     testing; the rest of the UI keeps the muted tokens as specified. */
+  --brand-icon-blue: #538EC6;
+  --brand-wordmark-blue: #A6C9E7;
+
+
+  /* Medium Blue lightened + saturated (~15%→48%, same ~210° hue) for small
+     data-label text — raw #6B7C8C reads too low-contrast on a Slate card,
+     and a merely-lightened version still reads as gray (same issue fixed
+     on the brand mark). Keeps the "Data labels" role visibly blue. */
+  --label-blue: #77A3CF;
+
+  /* Off-white / cream (primary readable light color — never pure white) */
+  --soft-white: #F6F7F8;
+  --cool-cream: #E6E8EB;
+  --muted-text: rgba(215, 225, 234, 0.68);
+  --faint-text: rgba(215, 225, 234, 0.48);
+
+  /* A slightly more saturated blue than --light-blue, used where the pale
+     token reads as near-white against Slate (chart line, active accents) —
+     still restrained, never neon. */
+  --accent-blue: #8FB6D9;
+  --accent-blue-soft: rgba(143, 182, 217, 0.18);
+
+  /* Coach / warm accent — muted ochre, distinct from data-blue family */
+  --coach-amber: #B8783D;
+  --coach-amber-dark: #9C6430;
+  --coach-amber-soft: rgba(184, 120, 61, 0.16);
+  --coach-cream-bg: #F3E9D8;
+  --coach-cream-border: #E5D3B4;
+  --coach-ink: #4A3A28;
+  --coach-ink-muted: rgba(74, 58, 40, 0.68);
+
+  /* Typography */
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Layout */
+  --page-max: 1360px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--slate);
+  color: var(--soft-white);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+
+.container {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ============================================================
+   Top bar
+   ============================================================ */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 32px;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  position: relative;
+  z-index: 5;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--brand-wordmark-blue);
+}
+
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.topnav a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  color: var(--light-blue);
+  opacity: 0.85;
+}
+
+.topnav a {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.topnav a:not(.active):hover { opacity: 1; background: var(--blue-gray-soft); }
+
+/* Selected/open state — visually distinct from hover so it's clear the tab
+   is open, and that clicking it again will close it back to Presentation. */
+.topnav a.active {
+  color: var(--soft-white);
+  opacity: 1;
+  background: var(--accent-blue-soft);
+  box-shadow: inset 0 0 0 1px rgba(143, 182, 217, 0.35);
+}
+.topnav a.active:hover { background: var(--accent-blue-soft); filter: brightness(1.12); }
+
+.topnav svg { width: 16px; height: 16px; }
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--slate-surface-2);
+  border: 1px solid var(--slate-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--light-blue);
+}
+
+/* ============================================================
+   Hero band — fixed-aspect container, ready for a raster swap.
+   Recommended source asset: 2400x720 (10:3), see project notes.
+   ============================================================ */
+.hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 10 / 3;
+  max-height: 340px;
+  min-height: 220px;
+  overflow: hidden;
+  background: var(--slate);
+}
+
+.hero-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* Left-to-right fade so the heading/eyebrow (left-aligned) always has
+   contrast, without crushing the photo itself — it's already dark/moody,
+   so this stays light rather than the heavier wash a brighter stock photo
+   would need. */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    rgba(30, 37, 46, 0.55) 0%,
+    rgba(30, 37, 46, 0.22) 42%,
+    rgba(30, 37, 46, 0.02) 72%);
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.hero-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--coach-amber);
+}
+
+.hero-heading {
+  font-family: var(--font-heading);
+  font-size: 40px;
+  line-height: 1.14;
+  font-weight: 600;
+  color: var(--soft-white);
+  max-width: 620px;
+  margin: 0;
+}
+
+.hero-sub {
+  font-size: 14.5px;
+  color: rgba(246, 247, 248, 0.78);
+  max-width: 480px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ============================================================
+   Page body
+   ============================================================ */
+.page-body {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 32px 56px;
+}
+
+/* KPI row overlaps the hero's bottom edge slightly, per mockup */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: -34px;
+  position: relative;
+  z-index: 3;
+}
+
+.card {
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.kpi-card {
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kpi-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.kpi-label {
+  font-size: 12.5px;
+  color: var(--label-blue);
+  max-width: 140px;
+  line-height: 1.35;
+}
+
+.kpi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--slate-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.kpi-icon svg { width: 15px; height: 15px; color: var(--light-blue); }
+
+.kpi-value {
+  font-family: var(--font-heading);
+  font-size: 27px;
+  font-weight: 600;
+  color: var(--soft-white);
+}
+
+.kpi-foot {
+  font-size: 12px;
+  color: var(--faint-text);
+}
+.kpi-foot .up { color: #9FD6B0; }
+
+/* status bar variant (On Track card) */
+.status-bar-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--slate-surface-2);
+  overflow: hidden;
+}
+.status-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--blue-gray), var(--accent-blue));
+}
+
+/* ============================================================
+   Projection + Portfolio row
+   ============================================================ */
+.mid-row {
+  display: grid;
+  /* minmax(0, Nfr), not plain Nfr — fr tracks default to an implicit `auto`
+     minimum, so the chart canvas's intrinsic width was forcing both tracks
+     to expand past the 2.5:1.5 ratio and overflow the container. minmax(0, …)
+     lets the tracks actually shrink to the ratio and stay aligned with the
+     4-card grid above/below. */
+  grid-template-columns: minmax(0, 2.5fr) minmax(0, 1.5fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.mid-row > .card { min-width: 0; }
+
+.panel {
+  padding: 22px 24px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.panel-title {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.portfolio-toggle-group {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  background: var(--slate-surface);
+  padding: 2px;
+  border-radius: var(--radius-pill);
+  min-width: 140px;
+}
+
+.toggle-option {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  padding: 6px 13px 6px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--faint-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+
+.toggle-option:nth-child(2) {
+  padding: 6px 11px 6px 13px;
+}
+
+.toggle-option:hover:not(.active) {
+  color: var(--muted-text);
+}
+
+.portfolio-toggle-group::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  height: calc(100% - 4px);
+  background: var(--soft-white);
+  border-radius: 7px;
+  transition: left 0.25s ease-out;
+}
+
+.portfolio-toggle-group.projected::before {
+  left: calc(50%);
+}
+
+.toggle-option.active {
+  color: var(--slate);
+}
+
+.legend-inline {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12.5px;
+  color: var(--light-blue);
+}
+.legend-inline .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.legend-inline .dot.solid { background: var(--accent-blue); }
+.legend-inline .dot.dashed { border: 1px dashed var(--blue-gray); background: transparent; }
+.legend-inline .swatch-band {
+  display: inline-block;
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+  background: rgba(143, 182, 217, 0.28);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.chart-wrap { position: relative; height: 260px; min-width: 0; }
+.chart-wrap canvas { max-width: 100%; }
+
+/* Retirement-point callout — Light Blue "information callout" per the
+   Visual Brief ("soft textbook highlight"), matching the reference mockup's
+   annotation box at the projection/target crossing. */
+.chart-callout {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: var(--light-blue);
+  color: var(--slate);
+  padding: 7px 11px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  font-weight: 500;
+}
+.chart-callout strong { font-weight: 700; }
+
+/* Portfolio section: chart on left, legend on right */
+.panel:has(#portfolio-legend) {
+  padding: 22px 24px !important;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+.panel:has(#portfolio-legend) .panel-head {
+  flex-basis: 100%;
+  margin-bottom: 8px;
+}
+.portfolio-total {
+  position: relative;
+  width: calc(50% - 8px);
+  height: 280px;
+  min-height: 280px;
+  max-height: 280px;
+  flex-shrink: 0;
+  flex-grow: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  contain: layout style paint;
+  overflow: hidden;
+}
+
+#portfolio-chart {
+  transition: opacity 0.15s ease-in-out;
+}
+.portfolio-total-label {
+  position: absolute;
+  text-align: center;
+  pointer-events: none;
+}
+.portfolio-total-value {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--soft-white);
+}
+.portfolio-total-sub {
+  font-size: 11.5px;
+  color: var(--muted-text);
+  margin-top: 2px;
+}
+
+.legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: calc(50% - 8px);
+  justify-content: center;
+  flex-shrink: 0;
+  padding-left: 16px;
+}
+.legend-row {
+  display: grid;
+  grid-template-columns: 8px 1fr 35px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.legend-label {
+  color: var(--light-blue);
+  font-size: 13px;
+}
+.legend-pct {
+  color: var(--soft-white);
+  font-weight: 500;
+  text-align: right;
+  font-size: 13px;
+}
+
+.panel-link-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--slate-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--light-blue);
+}
+
+/* ============================================================
+   Secondary metrics row
+   ============================================================ */
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.metric-card {
+  padding: 16px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.metric-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--slate-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.metric-icon svg { width: 15px; height: 15px; color: var(--light-blue); }
+
+.metric-body { flex: 1; min-width: 0; }
+.metric-label { font-size: 12px; color: var(--label-blue); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.metric-info-icon {
+  font-size: 12px;
+  color: var(--muted-text);
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+.metric-info-icon:hover {
+  color: var(--light-blue);
+}
+.metric-value { font-family: var(--font-heading); font-size: 20px; font-weight: 600; color: var(--soft-white); }
+.metric-caption { font-size: 12px; color: var(--faint-text); margin-top: 6px; line-height: 1.4; }
+.metric-chevron { color: var(--blue-gray); font-size: 14px; margin-left: auto; align-self: center; }
+
+/* ============================================================
+   Coach panel — distinct warm territory
+   ============================================================ */
+.coach-panel {
+  margin-top: 16px;
+  background: var(--coach-cream-bg);
+  border: 1px solid var(--coach-cream-border);
+  border-radius: var(--radius-md);
+  padding: 26px 30px;
+  display: grid;
+  grid-template-columns: 1.5fr 1.3fr 1fr;
+  gap: 28px;
+  color: var(--coach-ink);
+}
+
+.coach-col-main { display: flex; gap: 16px; }
+
+.coach-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--coach-amber-soft);
+  color: var(--coach-amber-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.coach-badge svg { width: 20px; height: 20px; }
+
+.coach-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--coach-amber-dark);
+  margin-bottom: 6px;
+}
+
+.coach-heading {
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 400;
+  margin: 0 0 12px;
+  line-height: 1.6;
+  color: var(--coach-ink);
+}
+
+.coach-body {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--coach-ink-muted);
+  margin: 0;
+}
+
+.coach-col-recs { border-left: 1px solid var(--coach-cream-border); padding-left: 28px; }
+.coach-recs-title { font-size: 13.5px; font-weight: 600; margin-bottom: 14px; color: var(--coach-ink); }
+
+.coach-rec {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.coach-rec:last-child { margin-bottom: 0; }
+
+.coach-rec-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(74, 58, 40, 0.08);
+  color: var(--coach-ink);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.coach-rec-title { font-size: 13px; font-weight: 500; color: var(--coach-ink); margin-bottom: 2px; }
+.coach-rec-sub { font-size: 12px; color: var(--coach-ink-muted); line-height: 1.4; }
+
+.coach-col-cta {
+  border-left: 1px solid var(--coach-cream-border);
+  padding-left: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.coach-cta-top { display: flex; flex-direction: column; gap: 12px; }
+
+.btn-amber {
+  background: var(--coach-amber);
+  color: var(--soft-white);
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 11px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  transition: background 0.15s ease;
+}
+.btn-amber:hover { background: var(--coach-amber-dark); }
+
+.coach-scenarios-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--coach-amber-dark);
+}
+
+.coach-tip {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding-top: 16px;
+  border-top: 1px solid var(--coach-cream-border);
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--coach-ink-muted);
+  line-height: 1.45;
+}
+.coach-tip svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; color: var(--coach-amber-dark); }
+
+/* ============================================================
+   Utility screens — Data & Configuration tabs
+   Same environment (Slate/blue), lower visual intensity than
+   Presentation: no hero, simple header + form/table surfaces.
+   ============================================================ */
+.util-header {
+  padding: 28px 0 20px;
+}
+.util-title {
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--soft-white);
+  margin: 0 0 6px;
+}
+.util-sub {
+  font-size: 13.5px;
+  color: var(--muted-text);
+  margin: 0;
+}
+
+/* ============================================================
+   Configuration interview wizard
+   One question at a time, editorial/conversational tone — matches the
+   Presentation hero's heading treatment rather than a dense form.
+   ============================================================ */
+.wizard-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0 32px;
+}
+
+.wizard-card {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 40px 40px 32px;
+}
+
+.wizard-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--faint-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.wizard-close-btn:hover { background: var(--blue-gray-soft); color: var(--soft-white); }
+.wizard-close-btn svg { width: 16px; height: 16px; }
+
+.wizard-progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+.wizard-progress .dot {
+  height: 4px;
+  flex: 1;
+  border-radius: var(--radius-pill);
+  background: var(--slate-surface-2);
+}
+.wizard-progress .dot.done { background: var(--blue-gray); }
+.wizard-progress .dot.active { background: var(--accent-blue); }
+
+.wizard-question {
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--soft-white);
+  margin: 0 0 8px;
+}
+.wizard-sub {
+  font-size: 13.5px;
+  color: var(--muted-text);
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+
+.wizard-input-area { margin-bottom: 28px; }
+.wizard-input-area input,
+.wizard-input-area select {
+  width: 100%;
+  background: var(--slate-surface-2);
+  border: 1px solid var(--slate-border);
+  border-radius: var(--radius-sm);
+  color: var(--soft-white);
+  font-family: var(--font-heading);
+  font-size: 22px;
+  padding: 14px 16px;
+}
+.wizard-input-area input:focus, .wizard-input-area select:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+.wizard-input-hint {
+  font-size: 12px;
+  color: var(--faint-text);
+  margin-top: 8px;
+}
+.wizard-suggestion {
+  background: var(--light-blue-soft);
+  border: 1px solid var(--slate-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--light-blue);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.wizard-nav {
+  display: flex;
+  align-items: center;
+}
+.wizard-done-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Plan paragraph — the return-visit landing view. The coach's own voice
+   describing the plan back to you, with each captured value as an inline
+   fill-in-the-blank rather than a labeled form row. */
+.paragraph-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.paragraph-header-row .util-title { margin: 0; }
+.wand-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--slate-surface-2);
+  border: 1px solid var(--slate-border);
+  color: var(--accent-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.12s ease;
+}
+.wand-btn:hover { background: var(--blue-gray-soft); }
+.wand-btn svg { width: 16px; height: 16px; }
+
+.plan-paragraph-card { padding: 28px 32px; }
+.plan-paragraph {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  line-height: 1.9;
+  color: var(--soft-white);
+  margin: 0;
+}
+
+/* Editable value — underlined and blue, clickable, opens the field modal. */
+.paragraph-fill {
+  color: var(--accent-blue);
+  border-bottom: 1px solid var(--accent-blue);
+  cursor: pointer;
+  padding-bottom: 1px;
+  transition: opacity 0.12s ease;
+}
+.paragraph-fill:hover { opacity: 0.75; }
+
+/* Coach tone — underlined the same way (signals "this will be editable"),
+   but muted and not clickable, since there's only one option today. */
+.paragraph-fill.disabled {
+  color: var(--muted-text);
+  border-bottom: 1px dotted var(--faint-text);
+  cursor: default;
+}
+
+/* Single-question edit modal. */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 25, 31, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+.modal-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--slate-surface);
+  border: 1px solid var(--slate-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  padding: 32px 32px 24px;
+}
+
+textarea#cfg-coach-notes {
+  width: 100%;
+  background: var(--slate-surface-2);
+  border: 1px solid var(--slate-border);
+  border-radius: var(--radius-sm);
+  color: var(--soft-white);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  padding: 11px 13px;
+  resize: vertical;
+  margin-bottom: 4px;
+}
+textarea#cfg-coach-notes:focus { outline: none; border-color: var(--accent-blue); }
+
+/* Advanced accordion — collapsed by default; the top of the page (the
+   paragraph, notes) is what most people should actually engage with. */
+.advanced-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+.advanced-chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--label-blue);
+  transition: transform 0.15s ease;
+}
+.advanced-toggle[aria-expanded="true"] .advanced-chevron { transform: rotate(180deg); }
+.advanced-body { margin-top: 14px; }
+
+.advanced-section {
+  padding: 18px 0;
+  border-top: 1px solid var(--slate-border);
+}
+.advanced-section:first-of-type { border-top: none; padding-top: 4px; }
+.advanced-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--soft-white);
+  margin-bottom: 4px;
+}
+.advanced-section-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.advanced-section-title-row .advanced-section-title { margin-bottom: 4px; }
+.advanced-section-title-row .th-help { color: var(--label-blue); font-size: 12px; }
+
+.util-panel {
+  padding: 22px 24px;
+  margin-bottom: 16px;
+}
+
+.util-panel-title {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--soft-white);
+}
+.util-panel-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.util-panel-title-row .util-panel-title { margin-bottom: 0; }
+.util-panel-title-row .th-help {
+  color: var(--label-blue);
+  font-size: 13px;
+  border-bottom: none;
+}
+.util-panel-title-row .th-help::after { font-size: 14px; opacity: 0.9; }
+.util-panel-desc {
+  font-size: 12.5px;
+  color: var(--muted-text);
+  margin: 0 0 16px;
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+/* Retirement Vehicles renders as two genuinely separate <table> elements
+   (Account setup vs. Contribution/movement) side by side, rather than one
+   wide table with a rule down the middle — so the row lines of one never
+   visually bleed into the other, and the two read as related-but-distinct
+   at a glance. */
+.vehicle-tables-wrap {
+  display: flex;
+  align-items: stretch;
+}
+.vehicle-table-col { flex: 1 1 auto; min-width: 0; }
+.vehicle-table-col:last-child { flex: 0 0 auto; }
+
+.data-table-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-text);
+  margin-bottom: 8px;
+}
+
+/* A soft, floating separator rather than a hard table border — inset from
+   top/bottom and faded at the ends so it reads as "gap between two things"
+   instead of a structural grid line. Centered in its own gutter, so it sits
+   between the tables rather than looking fused to either edge. */
+.table-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 34px 24px 0;
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    var(--blue-gray) 12%,
+    var(--blue-gray) 88%,
+    transparent 100%);
+  opacity: 0.7;
+}
+
+.data-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--label-blue);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--slate-border);
+  white-space: nowrap;
+  position: relative;
+}
+
+/* Column-header help tooltip — hover/focus the "ⓘ" to see what a field
+   means. Light Blue "information callout" treatment, same family as the
+   chart's retirement-point callout. */
+.th-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: help;
+  position: relative;
+  border-bottom: 1px dotted var(--label-blue);
+  padding-bottom: 1px;
+}
+.th-help::after {
+  content: 'ⓘ';
+  font-size: 11px;
+  opacity: 0.85;
+}
+.th-help-inline { font-size: 11px; }
+.th-tip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: var(--light-blue);
+  color: var(--slate);
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  width: 240px;
+  z-index: 30;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+}
+.th-help:hover .th-tip,
+.th-help:focus .th-tip { visibility: visible; opacity: 1; }
+.th-tip-wide { width: 340px; }
+.th-tip-wide strong { color: var(--slate); }
+.data-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--slate-border);
+  color: var(--light-blue);
+  vertical-align: middle;
+}
+.data-table tbody tr:hover td,
+.data-table tbody tr.row-hover-sync td { background: var(--blue-gray-soft); }
+.data-table input, .data-table select {
+  width: 100%;
+  min-width: 92px;
+  background: var(--slate-surface-2);
+  border: 1px solid var(--slate-border);
+  border-radius: 6px;
+  color: var(--soft-white);
+  font-size: 12.5px;
+  padding: 6px 7px;
+  font-family: var(--font-body);
+}
+.data-table input[type="number"] { min-width: 84px; }
+.data-table td { padding: 8px 6px; }
+.data-table td:has(.row-checkbox) { text-align: center; }
+.row-checkbox {
+  width: 17px;
+  height: 17px;
+  min-width: 0;
+  accent-color: var(--accent-blue);
+  cursor: pointer;
+}
+
+/* Benefit (non-Insurance) renders as plain text, not an input — signals
+   "not editable here" without needing a disabled-looking gray box, since
+   this isn't a form error state, just a different field. */
+.cell-readonly {
+  display: inline-block;
+  padding: 6px 7px;
+  font-size: 12.5px;
+  color: var(--light-blue);
+}
+.cell-na {
+  color: var(--faint-text);
+  font-style: italic;
+}
+
+/* "As of <date>" / "starting balance" note under a Check-in balance figure
+   — makes explicit that the number is only as fresh as the last check-in,
+   not necessarily today's real balance. */
+.cell-sub {
+  font-size: 11px;
+  color: var(--faint-text);
+  margin-top: 2px;
+}
+.row-remove {
+  background: transparent;
+  border: none;
+  color: var(--faint-text);
+  font-size: 16px;
+  padding: 4px 8px;
+}
+.row-remove:hover { color: #d98787; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+.form-field label {
+  font-size: 12px;
+  color: var(--label-blue);
+}
+.form-field input, .form-field select {
+  background: var(--slate-surface-2);
+  border: 1px solid var(--slate-border);
+  border-radius: 8px;
+  color: var(--soft-white);
+  font-size: 13.5px;
+  padding: 9px 11px;
+  font-family: var(--font-body);
+}
+.form-field input:focus, .form-field select:focus,
+.data-table input:focus, .data-table select:focus {
+  outline: none;
+  border-color: var(--blue-gray);
+}
+.form-hint { font-size: 11.5px; color: var(--faint-text); margin-top: 2px; }
+
+.btn-secondary {
+  background: var(--slate-surface-2);
+  border: 1px solid var(--slate-border);
+  color: var(--soft-white);
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.btn-secondary:hover { background: var(--slate-surface); }
+
+.btn-primary {
+  background: var(--light-blue);
+  border: none;
+  color: var(--slate);
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled, .btn-secondary:disabled { opacity: 0.5; cursor: default; pointer-events: none; }
+
+.actions-row {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.save-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--slate-surface-2);
+  border: 1px solid var(--slate-border);
+  color: var(--soft-white);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  z-index: 50;
+}
+.save-toast.show { opacity: 1; transform: translateY(0); }
+
+.hidden { display: none !important; }
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 1080px) {
+  .kpi-row, .metric-row { grid-template-columns: repeat(2, 1fr); }
+  .mid-row { grid-template-columns: 1fr; }
+  .coach-panel { grid-template-columns: 1fr; }
+  .coach-col-recs, .coach-col-cta { border-left: none; padding-left: 0; border-top: 1px solid var(--coach-cream-border); padding-top: 18px; }
+  .form-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .kpi-row, .metric-row { grid-template-columns: 1fr; }
+  .hero-heading { font-size: 30px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .container, .page-body, .topbar { padding-left: 18px; padding-right: 18px; }
+}
