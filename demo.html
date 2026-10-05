@@ -1295,7 +1295,10 @@ table.data-table {
 }
 
 
-/* Account types legend (Data tab) — plain-language guide under the vehicle tables */
+/* Account types legend (Data tab) — plain-language guide under the vehicle tables.
+   The body is pushed in ~5% so it doesn't read as another left-aligned block of
+   the table above; group headings (parents) sit at that inset and the types
+   (children) are indented a further step beneath them. */
 .type-legend {
   margin-top: 14px;
   font-size: 12.5px;
@@ -1307,25 +1310,52 @@ table.data-table {
   width: fit-content;
 }
 .type-legend[open] summary { margin-bottom: 10px; }
+#type-legend-body { margin-left: 5%; }
 .type-legend-group {
-  margin: 12px 0 4px;
+  margin: 16px 0 4px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted-text);
 }
+.type-legend-head + .type-legend-group { margin-top: 8px; }
+/* Three columns: Type | Examples | What it means (the header row shares the grid). */
+.type-legend-head,
 .type-legend-row {
   display: grid;
-  grid-template-columns: minmax(180px, 280px) 1fr;
+  grid-template-columns: minmax(150px, 220px) minmax(140px, 210px) 1fr;
   gap: 4px 20px;
+}
+.type-legend-row { margin-left: 22px; }
+/* Same look as the table headers above (Company, Account Name, Type, ...):
+   blue, uppercase, with a thin underline. It spans the whole table, so "Type"
+   starts at the table's left edge (over the group headings) while Examples and
+   What it means stay over their own columns. */
+.type-legend-head {
+  padding: 8px 0 8px 22px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--label-blue);
+  border-bottom: 1px solid var(--slate-border);
+}
+.type-legend-head > div:first-child { margin-left: -22px; }
+.type-legend-row {
   padding: 6px 0;
   border-top: 1px solid rgba(215, 225, 234, 0.08);
 }
 .type-legend-name { font-weight: 600; }
+.type-legend-examples { color: var(--muted-text); line-height: 1.5; }
 .type-legend-help { color: var(--muted-text); line-height: 1.5; }
+@media (max-width: 900px) {
+  #type-legend-body { margin-left: 3%; }
+}
 @media (max-width: 720px) {
+  #type-legend-body { margin-left: 0; }
+  .type-legend-head { display: none; }
   .type-legend-row { grid-template-columns: 1fr; }
+  .type-legend-examples::before { content: "Examples: "; }
 }
 
 .demo-hero-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
@@ -1781,8 +1811,9 @@ table.data-table {
 // Fields per type:
 //   id                       stable key, stored on each vehicle as `type`
 //   group                    parent category shown in the dropdown and donut
-//   label / products         plain-language name, and the product names people
-//                            will recognize it by (shown in parentheses)
+//   label / products         short plain-language name (shown in the dropdown),
+//                            and example product names people will recognize it
+//                            by (shown in the legend's Examples column)
 //   growth                   how the projection moves its balance:
 //                              'market'        compounds at the market-rate range
 //                                              (simulated) plus contributions
@@ -1851,7 +1882,7 @@ table.data-table {
       id: 'checking',
       group: 'Checking/Savings',
       label: 'Checking',
-      products: '',
+      products: 'checking account',
       growth: 'contributions',
       countsTowardRetirement: true,
       moneyRole: 'buffer',
@@ -1863,7 +1894,7 @@ table.data-table {
       id: 'savings',
       group: 'Checking/Savings',
       label: 'Savings',
-      products: '',
+      products: 'savings account, high-yield savings',
       growth: 'contributions',
       countsTowardRetirement: true,
       moneyRole: 'buffer',
@@ -1926,8 +1957,15 @@ table.data-table {
     return TYPES.filter(t => t.group === group);
   }
 
-  // "Label (products)" as shown in the Data tab dropdown.
+  // The short name shown in the Data tab dropdown and legend. Examples live in
+  // their own column of the legend, not in the name.
   function displayLabel(type) {
+    return type.label;
+  }
+
+  // "Label (examples)" for places with no separate examples column, such as the
+  // coach's guide, where the product names help it recognize an account.
+  function labelWithExamples(type) {
     return type.products ? `${type.label} (${type.products})` : type.label;
   }
 
@@ -1935,13 +1973,13 @@ table.data-table {
   // coach's understanding can never drift from the real treatment.
   function coachGuide() {
     return TYPES
-      .map(t => `- ${displayLabel(t)}: ${t.coachNote}`)
+      .map(t => `- ${labelWithExamples(t)}: ${t.coachNote}`)
       .join('\n');
   }
 
   return {
     GROUPS, TYPES, byId,
-    inferTypeId, typeOf, groupOf, growthOf, typesInGroup, displayLabel, coachGuide,
+    inferTypeId, typeOf, groupOf, growthOf, typesInGroup, displayLabel, labelWithExamples, coachGuide,
   };
 });
 
@@ -3264,10 +3302,15 @@ function computeProjection(config, data) {
   function renderTypeLegend() {
     const body = document.getElementById('type-legend-body');
     if (!body) return;
-    body.innerHTML = VehicleTypes.GROUPS.map(group => {
+    const head = `
+      <div class="type-legend-head">
+        <div>Type</div><div>Examples</div><div>What it means</div>
+      </div>`;
+    body.innerHTML = head + VehicleTypes.GROUPS.map(group => {
       const rows = VehicleTypes.typesInGroup(group).map(t => `
         <div class="type-legend-row">
           <div class="type-legend-name">${escapeHtml(VehicleTypes.displayLabel(t))}</div>
+          <div class="type-legend-examples">${escapeHtml(t.products || '—')}</div>
           <div class="type-legend-help">${escapeHtml(t.help)}</div>
         </div>`).join('');
       return rows ? `<div class="type-legend-group">${escapeHtml(group)}</div>${rows}` : '';

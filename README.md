@@ -37,14 +37,14 @@ The Coach needs the `claude` CLI installed and signed in on your machine. Withou
 - **Trajectory.** *Ahead*, *On Track*, or *Worth Review* is based on the age your projection first reaches your target number, compared with the retirement age you want. It's a prompt to look closer, not a verdict.
 - **Every account has a Type.** You pick one on the Data tab, grouped under a parent category, with plain-language help for each. The Type decides how the projection treats the account. Here is the full table (it lives in one place, `js/vehicle-types.js`, and everything else reads from it, including the coach):
 
-| Group | Type | How the projection treats it | Counts toward retirement |
-|---|---|---|---|
-| Investment | Investment account (401k, IRA, brokerage) | Market simulation (4–10% range you set) | Yes |
-| Insurance | Life insurance: builds cash value (whole life, universal, paid-up) | Contributions only, no growth | Yes |
-| Insurance | Life insurance: protection only (term life) | Left out of the projection | No |
-| Checking/Savings | Checking | Contributions only, no growth | Yes |
-| Checking/Savings | Savings | Contributions only, no growth | Yes |
-| Other | Other | Held at current balance | Yes |
+| Group | Type | Examples | How the projection treats it | Counts toward retirement |
+|---|---|---|---|---|
+| Investment | Investment account | 401k, IRA, brokerage | Market simulation (4–10% range you set) | Yes |
+| Insurance | Life insurance: builds cash value | whole life, universal, paid-up | Contributions only, no growth | Yes |
+| Insurance | Life insurance: protection only | term life | Left out of the projection | No |
+| Checking/Savings | Checking | checking account | Contributions only, no growth | Yes |
+| Checking/Savings | Savings | savings account, high-yield savings | Contributions only, no growth | Yes |
+| Other | Other | — | Held at current balance | Yes |
 
 - **A simplified model (v1).** Only Investment accounts grow at the market-rate range. Cash value insurance, savings and checking are carried forward with their contributions only, which is a steady straight line, because real caps and rates are unknown. Real accounts usually grow more, so the projection is conservative for them.
 - **Protection-only insurance.** Term life is your family's safety net. It holds no cash value, its premium is a cost and not savings, and it's left out of the projection. Whole life and similar policies build cash value and are included.

@@ -9,8 +9,9 @@
 // Fields per type:
 //   id                       stable key, stored on each vehicle as `type`
 //   group                    parent category shown in the dropdown and donut
-//   label / products         plain-language name, and the product names people
-//                            will recognize it by (shown in parentheses)
+//   label / products         short plain-language name (shown in the dropdown),
+//                            and example product names people will recognize it
+//                            by (shown in the legend's Examples column)
 //   growth                   how the projection moves its balance:
 //                              'market'        compounds at the market-rate range
 //                                              (simulated) plus contributions
@@ -79,7 +80,7 @@
       id: 'checking',
       group: 'Checking/Savings',
       label: 'Checking',
-      products: '',
+      products: 'checking account',
       growth: 'contributions',
       countsTowardRetirement: true,
       moneyRole: 'buffer',
@@ -91,7 +92,7 @@
       id: 'savings',
       group: 'Checking/Savings',
       label: 'Savings',
-      products: '',
+      products: 'savings account, high-yield savings',
       growth: 'contributions',
       countsTowardRetirement: true,
       moneyRole: 'buffer',
@@ -154,8 +155,15 @@
     return TYPES.filter(t => t.group === group);
   }
 
-  // "Label (products)" as shown in the Data tab dropdown.
+  // The short name shown in the Data tab dropdown and legend. Examples live in
+  // their own column of the legend, not in the name.
   function displayLabel(type) {
+    return type.label;
+  }
+
+  // "Label (examples)" for places with no separate examples column, such as the
+  // coach's guide, where the product names help it recognize an account.
+  function labelWithExamples(type) {
     return type.products ? `${type.label} (${type.products})` : type.label;
   }
 
@@ -163,12 +171,12 @@
   // coach's understanding can never drift from the real treatment.
   function coachGuide() {
     return TYPES
-      .map(t => `- ${displayLabel(t)}: ${t.coachNote}`)
+      .map(t => `- ${labelWithExamples(t)}: ${t.coachNote}`)
       .join('\n');
   }
 
   return {
     GROUPS, TYPES, byId,
-    inferTypeId, typeOf, groupOf, growthOf, typesInGroup, displayLabel, coachGuide,
+    inferTypeId, typeOf, groupOf, growthOf, typesInGroup, displayLabel, labelWithExamples, coachGuide,
   };
 });

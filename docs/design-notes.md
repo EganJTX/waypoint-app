@@ -20,3 +20,4 @@ An optional end date for a contribution would let the coach say when money frees
 ## Known simplifications
 - Cash value insurance is modeled as balance plus contributions, with no growth and no cap, because the real cap is unknown.
 - Savings and checking get no interest; only Investment accounts grow at the market-rate range.
+- A college fund (for example Johnny's in the demo) is tracked as a Savings account for now, which means it still counts toward the retirement goal. That is a v1 stand-in: a college fund is money earmarked for a future spend, not for retirement. A real 529 or an "earmarked" type with `countsTowardRetirement: false` is the proper fix.

@@ -730,10 +730,15 @@
   function renderTypeLegend() {
     const body = document.getElementById('type-legend-body');
     if (!body) return;
-    body.innerHTML = VehicleTypes.GROUPS.map(group => {
+    const head = `
+      <div class="type-legend-head">
+        <div>Type</div><div>Examples</div><div>What it means</div>
+      </div>`;
+    body.innerHTML = head + VehicleTypes.GROUPS.map(group => {
       const rows = VehicleTypes.typesInGroup(group).map(t => `
         <div class="type-legend-row">
           <div class="type-legend-name">${escapeHtml(VehicleTypes.displayLabel(t))}</div>
+          <div class="type-legend-examples">${escapeHtml(t.products || '—')}</div>
           <div class="type-legend-help">${escapeHtml(t.help)}</div>
         </div>`).join('');
       return rows ? `<div class="type-legend-group">${escapeHtml(group)}</div>${rows}` : '';
