@@ -5,6 +5,7 @@
 const fs = require('fs');
 const { spawn } = require('child_process');
 const { upsertAnalysis, recentAnalysesFor, renderCoachProfile } = require('./coach-shared');
+const VehicleTypes = require('../js/vehicle-types');
 
 const CLAUDE_BIN = process.env.CLAUDE_CLI_PATH || 'claude';
 const COACH_TIMEOUT_MS = Number(process.env.COACH_TIMEOUT_MS) || 240000;
@@ -23,16 +24,12 @@ How to reason:
 - Keep recommendations grounded. Acknowledge advisor priorities (e.g., 401k match first, then a tax-deferred account).
 - Respect household risk tolerance. When spouses aren't aligned on a move, acknowledge it and find lower-risk alternatives.
 
-Account hierarchy you understand:
-- Checking: For living expenses and emergency access. Never recommend moving checking balances.
-- Savings: Secondary liquid buffer. Don't recommend draining this fully.
-- Investments (401k, IRAs, taxable): Long-term growth vehicles. Only suggest moving money here after checking and savings are adequately funded.
+How the projection treats each kind of account (this list comes straight from the app, so it is exact). The projection is a simplified model. Use your own knowledge of how each kind of vehicle really behaves, never say an account earns market returns unless the list says so, and when it matters to the advice, say plainly that the projection is conservative for it instead of inventing a specific rate.
+${VehicleTypes.coachGuide()}
 
-About the projection numbers: they come from a simplified model. Only Investment accounts (401k, IRA, brokerage) are grown at the assumed market range. Insurance cash value and Checking/Savings accounts are carried forward with their contributions only, so the projection likely understates their real growth (interest on savings, guaranteed and dividend crediting on whole life). Use your own knowledge of how each kind of vehicle really behaves. Do not say those accounts earn market returns, and when it matters to the advice, say plainly that the projection is conservative for them instead of inventing a specific rate. Projected balances are as of the target retirement age. Never attach them to an earlier milestone (for example a child's college start date). If you need a balance at an earlier date, estimate it from the starting balance plus contributions to that date and say it is an estimate.
+Sequencing: only suggest moving money into investments after checking and savings are adequately funded.
 
-The two kinds of insurance:
-- Protection-only policies (term life) are the family's safety net if something happens to the insured. They hold no cash value, and the premium is the cost of that net, not retirement savings. Never suggest increasing, redirecting, or finding more money for a protection policy, and never count one as a retirement asset. They are listed separately in the data as context only, so you can acknowledge the safety net exists.
-- Cash value policies (whole life, paid-up life) carry both a death benefit and a cash balance that grows over time. Their contributions are fair to discuss. The policy may cap how much cash value or funding it allows, and that cap is unknown here, so do not assume it can absorb unlimited extra contributions.
+Projected balances are as of the target retirement age. Never attach them to an earlier milestone (for example a child's college start date). If you need a balance at an earlier date, estimate it from the starting balance plus contributions to that date and say it is an estimate.
 
 Writing style:
 - Never use an em dash. Restructure the sentence into two sentences, a comma, or parentheses instead. Example: instead of "You're ahead — the goal is met," write "You're ahead. The goal is met."
@@ -319,7 +316,7 @@ function buildPortfolioBreakdown(projection) {
   projection.detail.forEach(v => {
     if (v.excluded) {
       // Insurance with no cash value: the family safety net, shown as context only.
-      if (v.category === 'Insurance') {
+      if (v.moneyRole === 'protectionCost' || (!v.moneyRole && v.category === 'Insurance')) {
         const parts = [];
         if (v.benefit) parts.push(`$${Math.round(v.benefit).toLocaleString()} benefit`);
         if (v.annualContribution) parts.push(`$${Math.round(v.annualContribution).toLocaleString()}/yr premium`);
@@ -327,7 +324,7 @@ function buildPortfolioBreakdown(projection) {
       }
       return;
     }
-    lines.push(`${v.vehicle} (${v.company}, ${v.category || 'Uncategorized'}): $${Math.round(v.startBalance).toLocaleString()} → $${Math.round(v.projectedBalance).toLocaleString()}`);
+    lines.push(`${v.vehicle} (${v.company}, ${v.typeLabel || v.category || 'Uncategorized'}): $${Math.round(v.startBalance).toLocaleString()} → $${Math.round(v.projectedBalance).toLocaleString()}`);
   });
   if (protection.length) {
     lines.push('', 'PROTECTION ONLY (family safety net, not retirement savings, context only):', ...protection);

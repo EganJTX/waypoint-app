@@ -1294,6 +1294,40 @@ table.data-table {
   .container, .page-body, .topbar { padding-left: 18px; padding-right: 18px; }
 }
 
+
+/* Account types legend (Data tab) — plain-language guide under the vehicle tables */
+.type-legend {
+  margin-top: 14px;
+  font-size: 12.5px;
+}
+.type-legend summary {
+  cursor: pointer;
+  color: var(--coach-amber);
+  font-weight: 600;
+  width: fit-content;
+}
+.type-legend[open] summary { margin-bottom: 10px; }
+.type-legend-group {
+  margin: 12px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-text);
+}
+.type-legend-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) 1fr;
+  gap: 4px 20px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(215, 225, 234, 0.08);
+}
+.type-legend-name { font-weight: 600; }
+.type-legend-help { color: var(--muted-text); line-height: 1.5; }
+@media (max-width: 720px) {
+  .type-legend-row { grid-template-columns: 1fr; }
+}
+
 .demo-hero-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
 .demo-badge{display:inline-block;padding:3px 10px;border-radius:999px;background:#B8783D;color:#fff;font:600 10.5px/1.4 Inter,sans-serif;letter-spacing:.08em;vertical-align:middle}
 .demo-reset{padding:0;background:none;border:0;color:var(--coach-amber);opacity:.85;font:500 11px Inter,sans-serif;letter-spacing:.02em;text-decoration:underline;cursor:pointer}
@@ -1526,13 +1560,12 @@ table.data-table {
         <span class="th-help" tabindex="0" aria-label="What do these fields mean?"><span class="th-tip th-tip-wide">
           <strong>Company</strong> — the provider/institution (e.g. Fidelity).<br/>
           <strong>Account Name</strong> — a label to tell accounts apart (e.g. "401(k)" vs "Roth IRA").<br/>
-          <strong>Category</strong> — groups this vehicle for the portfolio breakdown (Investment / Insurance / Checking/Savings). Organizational only — doesn't affect the math.<br/>
-          <strong>Benefit</strong> — payout if cashed out/claimed today. Net-worth context only, not counted in the projection. Only editable for Insurance — for every other category it's the same number as the account's balance, so it's shown as "—" and kept in sync automatically from Log a Check-in.<br/>
+          <strong>Type</strong> — what kind of account this is. It groups the vehicle for the portfolio breakdown and decides how the projection treats it (market growth, contributions only, or left out). See "What do these account types mean?" below the table.<br/>
+          <strong>Benefit</strong> — payout if cashed out/claimed today. Net-worth context only, not counted in the projection. Only editable for Insurance — for every other type it's the same number as the account's balance, so it's shown as "—" and kept in sync automatically from Log a Check-in.<br/>
           <strong>Contribution — Amount / Frequency</strong> — how much you add on a recurring basis, and how often. Leave Amount at 0 for irregular accounts.<br/>
-          <strong>Contribution — Builds Cash Value?</strong> — Insurance only. Check this for a policy that builds cash value you could draw on (e.g. whole life, paid-up life). Leave it unchecked for pure protection, where the premium is a cost with no cash value (e.g. term life). Other categories don't use this, so it shows "—".
         </span></span>
       </div>
-      <p class="util-panel-desc">Retirement Cash Value (RCV) — a vehicle's current balance — drives the projection math, and is set and updated entirely through Log a Check-in below, never here. A vehicle whose balance is $0 (and stays $0) is treated as protection-only and excluded from the projection, but still shown for full net-worth context via Benefit.</p>
+      <p class="util-panel-desc">Retirement Cash Value (RCV) — a vehicle's current balance — drives the projection math, and is set and updated entirely through Log a Check-in below, never here. A vehicle with a $0 balance, or a protection-only type like term life, is left out of the projection but still shown for full net-worth context via Benefit.</p>
       <div class="vehicle-tables-wrap">
         <div class="vehicle-table-col" style="overflow-x:auto;">
           <div class="data-table-group-label">Account</div>
@@ -1541,7 +1574,7 @@ table.data-table {
               <tr>
                 <th>Company</th>
                 <th>Account Name</th>
-                <th>Category</th>
+                <th>Type</th>
                 <th>Benefit</th>
               </tr>
             </thead>
@@ -1556,7 +1589,6 @@ table.data-table {
               <tr>
                 <th>Amount</th>
                 <th>Frequency</th>
-                <th>Builds Cash Value?</th>
                 <th></th>
               </tr>
             </thead>
@@ -1564,6 +1596,10 @@ table.data-table {
           </table>
         </div>
       </div>
+      <details class="type-legend">
+        <summary>What do these account types mean?</summary>
+        <div id="type-legend-body"></div>
+      </details>
       <div class="actions-row">
         <button class="btn-secondary" id="add-vehicle-btn">+ Add vehicle</button>
         <button class="btn-primary" id="save-vehicles-btn">Save changes</button>
@@ -1579,7 +1615,7 @@ table.data-table {
             <tr>
               <th>Company</th>
               <th>Account Name</th>
-              <th>Category</th>
+              <th>Type</th>
               <th>Last Recorded Balance</th>
               <th>New Balance (today)</th>
             </tr>
@@ -1722,15 +1758,201 @@ table.data-table {
 <script>
 (function () {
   'use strict';
+  try {
   // Fictional demo only. No requests leave this page: window.fetch is replaced
   // so every call the app makes to its own API is answered from the fixtures
   // below, with edits kept in this browser's localStorage.
   const STORE_KEY = 'waypoint_demo_v1';
-  const SEED = {"config":{"household":[{"name":"John","dateOfBirth":"1984-01-01"}],"destinationNumber":1650000,"destinationNumberHelper":{"desiredAnnualIncome":90000,"socialSecurityEstimate":24000,"useHelper":false},"targetRetirementAge":65,"projectionRates":{"min":0.04,"max":0.1,"upside":0.08},"inflationRate":0.025,"coachTone":"centered","coachNotes":"*Primary note/strategy from my advisor\nA 4% withdrawal rule is a reasonable starting point. If you have $1.65M and draw 4% ($66k) alongside Social Security, that covers the $90k target. Plan for the conservative case and be pleasantly surprised if markets cooperate.\n\n*Vehicle Notes\nTerm Life - pure protection while the kids are young, no cash value\nWhole Life - cash value builds tax-deferred, can borrow against it if needed\nJohnny's College Fund - savings earmarked for Johnny's tuition, college starts in about 10 years, not part of the retirement plan in spirit\n401k - the main growth engine\n\n*To Dos\nContribute to the 401k at least up to the full employer match first\nThen keep funding the Whole Life cash value","userConcerns":"I feel slightly behind on saving for my own retirement, but I know I have a pretty solid plan for Johnny in his college fund. He starts college in about 10 years. I am starting to wonder whether I should put even more into the college fund, or whether I should be increasing my 401k contributions instead, or some blend of the two. My spouse also wants to keep our checking and savings liquid in case something happens."},"data":{"vehicles":[{"id":"veh_jd_chk","company":"Chase Bank","vehicle":"Checking","category":"Checking/Savings","benefit":5678.32,"retirementCashValue":5678.32,"contribution":0,"period":"","addsToRetirementValue":false},{"id":"veh_jd_sav","company":"Chase Bank","vehicle":"Savings","category":"Checking/Savings","benefit":10412.95,"retirementCashValue":10412.95,"contribution":750,"period":"Monthly","addsToRetirementValue":false},{"id":"veh_jd_term","company":"Guardian","vehicle":"Term Life","category":"Insurance","benefit":1000000,"retirementCashValue":0,"contribution":900,"period":"Annually","addsToRetirementValue":false},{"id":"veh_jd_whole","company":"Guardian","vehicle":"Whole Life","category":"Insurance","benefit":500000,"retirementCashValue":43000,"contribution":500,"period":"Monthly","addsToRetirementValue":true},{"id":"veh_jd_401k","company":"Fidelity","vehicle":"401k","category":"Investment","benefit":126472,"retirementCashValue":126472,"contribution":500,"period":"Monthly","addsToRetirementValue":false},{"id":"veh_jd_529","company":"Fidelity","vehicle":"Johnny's College Fund","category":"Checking/Savings","benefit":35000,"retirementCashValue":35000,"contribution":250,"period":"Monthly","addsToRetirementValue":false}],"snapshots":[],"assessments":[],"currentProjection":null},"analyses":[{"verdict":"You're not behind so much as early: at today's pace you reach your $1.65M goal around age 68, three years past your age-65 target, with a projected $1.42M at retirement. That's a sequencing question, not a shortfall emergency.","recommendations":[{"title":"Let the 401k carry the extra weight, not the college fund","description":"Once you've captured the full employer match, consider directing any additional savings capacity toward your Fidelity 401k rather than adding extra to Johnny's college fund.","reasoning":"Your 401k has 23 years left to compound at market rates (4-10% in this plan) and is what's doing most of the work toward your $1.65M goal, projected to grow from $126,472 to $910,689. Johnny's college fund, by contrast, is modeled as a savings-style account with contribution-only growth and only a 10-year runway until he starts school, so extra dollars there have far less time and growth potential working for them. Based on its current contribution pace, that fund is on track to reach roughly $65,000 by the time Johnny enrolls (an estimate, not the plan's age-65 projection figure)."},{"title":"Keep the buffer, redirect the surplus","description":"Your Chase savings account is already projected to build a substantial buffer, climbing from $10,413 to $217,413, so once it comfortably covers 3-6 months of household expenses, consider gradually steering new savings contributions toward the 401k instead.","reasoning":"This respects your spouse's priority of keeping checking and savings liquid (nothing here suggests draining either account) while still putting fresh dollars to work closing the $231,220 gap between your projected and target balances at 65. It's a gradual shift of future contributions, not a reallocation of what's already sitting in the account."}],"fullReport":"## Your Situation\n\nAt 42, you're projected to reach your $1.65M retirement goal by around age 68, three years after your target of 65. At 65 specifically, the plan shows $1,418,780 in the middle outcome (from running simulations), with a downside case of $1,252,523 if markets underperform. That leaves a gap of about $231,220 between the projected middle outcome and your goal at your target age. This isn't a crisis. It's a timing gap that's very workable over the next 23 years, especially since your 401k, the main growth engine in your plan, still has two decades of compounding ahead of it.\n\nYour advisor's sequencing (401k match first, then Whole Life cash value) remains sound. The question you're wrestling with, college fund versus 401k, sits on top of that sequencing rather than replacing it.\n\n## Addressing the College Fund vs. 401k Question\n\nHere's the core tradeoff: your 401k is invested and modeled to grow at market rates (4% to 10% annually) for the next 23 years, which is why it's projected to roughly 7x from $126,472 to $910,689. Johnny's college fund, because it's held as a savings-style account in this plan, is modeled with contribution-only growth and no market return, and it only has about 10 years until he starts school. Based on its current contribution pace, it's on track to hold roughly $65,000 around that time (this is an estimate built from the starting balance plus contributions, not the plan's official age-65 projection number, which reflects a much longer horizon).\n\nThat combination, shorter time horizon and no assumed market growth in this model, means a dollar added to the college fund today does less work than a dollar added to the 401k. If you want to put extra toward Johnny, that's a values call and a reasonable one. But purely from a \"close the retirement gap\" lens, directing incremental dollars to the 401k, once your employer match is fully captured, does more to move your solved age back toward 65. Worth noting: if the college fund is actually invested in the market (some college savings vehicles are), its real growth could outpace what this conservative model shows. Worth checking with whoever manages that account.\n\n## Addressing the Liquidity Concern\n\nYour spouse's instinct to keep checking and savings liquid is a good one, and nothing in this plan requires touching either account's current balance. In fact, your Chase savings account is already on a strong trajectory, projected to grow from $10,413 to $217,413, which suggests you're already building a healthy buffer through regular contributions. The move here isn't \"use what's saved,\" it's \"once that buffer comfortably covers 3-6 months of expenses, consider sending future contributions to the 401k instead of continuing to stack savings past that point.\" That's a gradual shift in where new dollars go, not a reallocation of existing balances, and it should be an easier conversation to have with your spouse since the safety net stays fully intact.\n\n## Next Steps\n\nTwo things worth focusing on: confirm you're capturing the full 401k match (if you're not already), then look at whether you have room to push 401k contributions a bit further, especially using any new savings capacity rather than redirecting money earmarked for Johnny. Second, keep an eye on your savings buffer, once it's comfortably covering several months of expenses, that's the signal to start nudging new contributions toward the 401k rather than letting the buffer keep growing indefinitely. Both moves work with your current plan rather than against it, and both are reversible if your situation changes.","generatedAt":"2026-10-02T21:58:25.675Z"}]};
+  const SEED = {"config":{"household":[{"name":"John","dateOfBirth":"1984-01-01"}],"destinationNumber":1650000,"destinationNumberHelper":{"desiredAnnualIncome":90000,"socialSecurityEstimate":24000,"useHelper":false},"targetRetirementAge":65,"projectionRates":{"min":0.04,"max":0.1,"upside":0.08},"inflationRate":0.025,"coachTone":"centered","coachNotes":"*Primary note/strategy from my advisor\nA 4% withdrawal rule is a reasonable starting point. If you have $1.65M and draw 4% ($66k) alongside Social Security, that covers the $90k target. Plan for the conservative case and be pleasantly surprised if markets cooperate.\n\n*Vehicle Notes\nTerm Life - pure protection while the kids are young, no cash value\nWhole Life - cash value builds tax-deferred, can borrow against it if needed\nJohnny's College Fund - savings earmarked for Johnny's tuition, college starts in about 10 years, not part of the retirement plan in spirit\n401k - the main growth engine\n\n*To Dos\nContribute to the 401k at least up to the full employer match first\nThen keep funding the Whole Life cash value","userConcerns":"I feel slightly behind on saving for my own retirement, but I know I have a pretty solid plan for Johnny in his college fund. He starts college in about 10 years. I am starting to wonder whether I should put even more into the college fund, or whether I should be increasing my 401k contributions instead, or some blend of the two. My spouse also wants to keep our checking and savings liquid in case something happens."},"data":{"vehicles":[{"id":"veh_jd_chk","company":"Chase Bank","vehicle":"Checking","category":"Checking/Savings","benefit":5678.32,"retirementCashValue":5678.32,"contribution":0,"period":"","type":"checking"},{"id":"veh_jd_sav","company":"Chase Bank","vehicle":"Savings","category":"Checking/Savings","benefit":10412.95,"retirementCashValue":10412.95,"contribution":750,"period":"Monthly","type":"savings"},{"id":"veh_jd_term","company":"Guardian","vehicle":"Term Life","category":"Insurance","benefit":1000000,"retirementCashValue":0,"contribution":900,"period":"Annually","type":"term_life"},{"id":"veh_jd_whole","company":"Guardian","vehicle":"Whole Life","category":"Insurance","benefit":500000,"retirementCashValue":43000,"contribution":500,"period":"Monthly","type":"cash_value_life"},{"id":"veh_jd_401k","company":"Fidelity","vehicle":"401k","category":"Investment","benefit":126472,"retirementCashValue":126472,"contribution":500,"period":"Monthly","type":"investment"},{"id":"veh_jd_529","company":"Fidelity","vehicle":"Johnny's College Fund","category":"Checking/Savings","benefit":35000,"retirementCashValue":35000,"contribution":250,"period":"Monthly","type":"savings"}],"snapshots":[],"assessments":[],"currentProjection":null},"analyses":[{"verdict":"You're not behind so much as early: at today's pace you reach your $1.65M goal around age 68, three years past your age-65 target, with a projected $1.42M at retirement. That's a sequencing question, not a shortfall emergency.","recommendations":[{"title":"Let the 401k carry the extra weight, not the college fund","description":"Once you've captured the full employer match, consider directing any additional savings capacity toward your Fidelity 401k rather than adding extra to Johnny's college fund.","reasoning":"Your 401k has 23 years left to compound at market rates (4-10% in this plan) and is what's doing most of the work toward your $1.65M goal, projected to grow from $126,472 to $910,689. Johnny's college fund, by contrast, is modeled as a savings-style account with contribution-only growth and only a 10-year runway until he starts school, so extra dollars there have far less time and growth potential working for them. Based on its current contribution pace, that fund is on track to reach roughly $65,000 by the time Johnny enrolls (an estimate, not the plan's age-65 projection figure)."},{"title":"Keep the buffer, redirect the surplus","description":"Your Chase savings account is already projected to build a substantial buffer, climbing from $10,413 to $217,413, so once it comfortably covers 3-6 months of household expenses, consider gradually steering new savings contributions toward the 401k instead.","reasoning":"This respects your spouse's priority of keeping checking and savings liquid (nothing here suggests draining either account) while still putting fresh dollars to work closing the $231,220 gap between your projected and target balances at 65. It's a gradual shift of future contributions, not a reallocation of what's already sitting in the account."}],"fullReport":"## Your Situation\n\nAt 42, you're projected to reach your $1.65M retirement goal by around age 68, three years after your target of 65. At 65 specifically, the plan shows $1,418,780 in the middle outcome (from running simulations), with a downside case of $1,252,523 if markets underperform. That leaves a gap of about $231,220 between the projected middle outcome and your goal at your target age. This isn't a crisis. It's a timing gap that's very workable over the next 23 years, especially since your 401k, the main growth engine in your plan, still has two decades of compounding ahead of it.\n\nYour advisor's sequencing (401k match first, then Whole Life cash value) remains sound. The question you're wrestling with, college fund versus 401k, sits on top of that sequencing rather than replacing it.\n\n## Addressing the College Fund vs. 401k Question\n\nHere's the core tradeoff: your 401k is invested and modeled to grow at market rates (4% to 10% annually) for the next 23 years, which is why it's projected to roughly 7x from $126,472 to $910,689. Johnny's college fund, because it's held as a savings-style account in this plan, is modeled with contribution-only growth and no market return, and it only has about 10 years until he starts school. Based on its current contribution pace, it's on track to hold roughly $65,000 around that time (this is an estimate built from the starting balance plus contributions, not the plan's official age-65 projection number, which reflects a much longer horizon).\n\nThat combination, shorter time horizon and no assumed market growth in this model, means a dollar added to the college fund today does less work than a dollar added to the 401k. If you want to put extra toward Johnny, that's a values call and a reasonable one. But purely from a \"close the retirement gap\" lens, directing incremental dollars to the 401k, once your employer match is fully captured, does more to move your solved age back toward 65. Worth noting: if the college fund is actually invested in the market (some college savings vehicles are), its real growth could outpace what this conservative model shows. Worth checking with whoever manages that account.\n\n## Addressing the Liquidity Concern\n\nYour spouse's instinct to keep checking and savings liquid is a good one, and nothing in this plan requires touching either account's current balance. In fact, your Chase savings account is already on a strong trajectory, projected to grow from $10,413 to $217,413, which suggests you're already building a healthy buffer through regular contributions. The move here isn't \"use what's saved,\" it's \"once that buffer comfortably covers 3-6 months of expenses, consider sending future contributions to the 401k instead of continuing to stack savings past that point.\" That's a gradual shift in where new dollars go, not a reallocation of existing balances, and it should be an easier conversation to have with your spouse since the safety net stays fully intact.\n\n## Next Steps\n\nTwo things worth focusing on: confirm you're capturing the full 401k match (if you're not already), then look at whether you have room to push 401k contributions a bit further, especially using any new savings capacity rather than redirecting money earmarked for Johnny. Second, keep an eye on your savings buffer, once it's comfortably covering several months of expenses, that's the signal to start nudging new contributions toward the 401k rather than letting the buffer keep growing indefinitely. Both moves work with your current plan rather than against it, and both are reversible if your situation changes.","generatedAt":"2026-10-02T21:58:25.675Z"}]};
   const DEMO_COACH_MESSAGE = "This is a demo. The coach runs a real, local Claude Code analysis in the full app, which needs the Waypoint app (index.html + server) running on your own machine. It does not run here. Grab the code from the repo to see this part work end to end.";
+
+  // The types table (js/vehicle-types.js) decides how every vehicle is treated.
+  // The projection code below and app.js both read it; app.js via window.
+  const VehicleTypes = (function () {
+    const module = { exports: {} };
+    // The single source of truth for what each kind of vehicle IS and how
+// Waypoint treats it. Everything else reads from this table: the projection
+// engine (calculator.js, server.js), the Data tab dropdown and check-in rules
+// (app.js), and the coach's account guide (scripts/coach-analyze.js).
+//
+// To add a new kind of account (a 529 plan, an HSA, ...), add ONE row to TYPES.
+// Nothing else needs to know about it. To ask "how is X treated?", read the row.
+//
+// Fields per type:
+//   id                       stable key, stored on each vehicle as `type`
+//   group                    parent category shown in the dropdown and donut
+//   label / products         plain-language name, and the product names people
+//                            will recognize it by (shown in parentheses)
+//   growth                   how the projection moves its balance:
+//                              'market'        compounds at the market-rate range
+//                                              (simulated) plus contributions
+//                              'contributions' balance plus contributions only,
+//                                              no growth (linear)
+//                              'flat'          held at its current balance
+//                              'none'          not part of the projection at all
+//   countsTowardRetirement   whether the balance counts toward the retirement
+//                            goal (every type is 'yes' for now; reserved for
+//                            earmarked money like a college fund)
+//   moneyRole                'building' | 'buffer' | 'protectionCost' | 'other'
+//                            what contributions to it mean (reserved for a
+//                            future "where your money goes" view)
+//   needsCheckIn             whether it appears in Log a Check-in
+//   help                     plain-language description shown to the user
+//   coachNote                how the projection treats it, written for the coach
+//
+// Works in the browser (window.VehicleTypes) and in Node (require).
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.VehicleTypes = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  // Display order for groups, in the Data tab dropdown and the portfolio donut.
+  const GROUPS = ['Investment', 'Insurance', 'Checking/Savings', 'Other'];
+
+  const TYPES = [
+    {
+      id: 'investment',
+      group: 'Investment',
+      label: 'Investment account',
+      products: '401k, IRA, brokerage',
+      growth: 'market',
+      countsTowardRetirement: true,
+      moneyRole: 'building',
+      needsCheckIn: true,
+      help: 'Money invested in the market. It can grow, and it can dip.',
+      coachNote: 'Grown at the assumed market range from the profile, plus recurring contributions. This is the only kind of account modeled with market growth.',
+    },
+    {
+      id: 'cash_value_life',
+      group: 'Insurance',
+      label: 'Life insurance: builds cash value',
+      products: 'whole life, universal, paid-up',
+      growth: 'contributions',
+      countsTowardRetirement: true,
+      moneyRole: 'building',
+      needsCheckIn: true,
+      help: 'Pays your family and also builds a cash balance over time that you can borrow against or withdraw from. Your statement lists a "cash value" or "surrender value."',
+      coachNote: 'Carries both a death benefit and a cash balance. Carried forward with its contributions only, no growth or dividends, because the policy cap is unknown, so the projection likely understates its real growth. Its contributions are fair to discuss, but do not assume the policy can absorb unlimited extra funding.',
+    },
+    {
+      id: 'term_life',
+      group: 'Insurance',
+      label: 'Life insurance: protection only',
+      products: 'term life',
+      growth: 'none',
+      countsTowardRetirement: false,
+      moneyRole: 'protectionCost',
+      needsCheckIn: false,
+      help: 'Pays your family if something happens to you. It builds no cash value, so there is nothing to borrow or withdraw. Your statement will not list a cash value.',
+      coachNote: 'The family safety net if something happens to the insured. It holds no cash value, and the premium is the cost of that net, not retirement savings. It is left out of the projection and listed separately as context. Never suggest increasing, redirecting, or finding more money for it, and never count it as a retirement asset.',
+    },
+    {
+      id: 'checking',
+      group: 'Checking/Savings',
+      label: 'Checking',
+      products: '',
+      growth: 'contributions',
+      countsTowardRetirement: true,
+      moneyRole: 'buffer',
+      needsCheckIn: true,
+      help: 'Day-to-day spending money.',
+      coachNote: 'Day-to-day spending and emergency access. Carried forward with any contributions only. Never recommend moving checking balances.',
+    },
+    {
+      id: 'savings',
+      group: 'Checking/Savings',
+      label: 'Savings',
+      products: '',
+      growth: 'contributions',
+      countsTowardRetirement: true,
+      moneyRole: 'buffer',
+      needsCheckIn: true,
+      help: 'Money set aside that earns little or no market growth and is easy to access.',
+      coachNote: 'A liquid buffer. Carried forward with its contributions only, no interest or market growth, so the projection likely understates it. Do not say it earns market returns, and do not recommend draining it fully.',
+    },
+    {
+      id: 'other',
+      group: 'Other',
+      label: 'Other',
+      products: '',
+      growth: 'flat',
+      countsTowardRetirement: true,
+      moneyRole: 'other',
+      needsCheckIn: true,
+      help: 'Anything that does not fit above. It is carried forward at its current balance.',
+      coachNote: 'Held flat at its current balance.',
+    },
+  ];
+
+  const byId = {};
+  TYPES.forEach(t => { byId[t.id] = t; });
+
+  // Existing vehicles saved before types existed have only a `category` (and,
+  // for insurance, the old cash-value checkbox). Work out the type they were
+  // already being treated as, so nothing about their numbers changes.
+  // Returns '' when there is not enough to go on (a brand-new blank row).
+  function inferTypeId(vehicle) {
+    if (vehicle && vehicle.type && byId[vehicle.type]) return vehicle.type;
+    switch (vehicle && vehicle.category) {
+      case 'Investment': return 'investment';
+      case 'Insurance':
+        return (vehicle.addsToRetirementValue || (vehicle.retirementCashValue || 0) > 0)
+          ? 'cash_value_life' : 'term_life';
+      case 'Checking/Savings':
+        return /checking/i.test(vehicle.vehicle || '') ? 'checking' : 'savings';
+      case 'Other': return 'other';
+      default: return '';
+    }
+  }
+
+  // The type object that governs a vehicle. Anything unrecognized is treated
+  // as 'Other' (held flat), which matches how unknown categories always behaved.
+  function typeOf(vehicle) {
+    return byId[inferTypeId(vehicle)] || byId.other;
+  }
+
+  // Parent group of a vehicle ('' if it has none yet).
+  function groupOf(vehicle) {
+    if (vehicle && vehicle.type && byId[vehicle.type]) return byId[vehicle.type].group;
+    return (vehicle && vehicle.category) || '';
+  }
+
+  function growthOf(vehicle) {
+    return typeOf(vehicle).growth;
+  }
+
+  function typesInGroup(group) {
+    return TYPES.filter(t => t.group === group);
+  }
+
+  // "Label (products)" as shown in the Data tab dropdown.
+  function displayLabel(type) {
+    return type.products ? `${type.label} (${type.products})` : type.label;
+  }
+
+  // The account guide handed to the coach, generated from the table so the
+  // coach's understanding can never drift from the real treatment.
+  function coachGuide() {
+    return TYPES
+      .map(t => `- ${displayLabel(t)}: ${t.coachNote}`)
+      .join('\n');
+  }
+
+  return {
+    GROUPS, TYPES, byId,
+    inferTypeId, typeOf, groupOf, growthOf, typesInGroup, displayLabel, coachGuide,
+  };
+});
+
+    return module.exports;
+  })();
+  window.VehicleTypes = VehicleTypes;
+  const typesForCalculator = VehicleTypes; // calculator.js declares its own VehicleTypes, so hand it this alias
 
   const calculator = (function () {
     const module = { exports: {} };
+    const require = () => typesForCalculator; // calculator.js's only require is the types table
     // Pure projection engine — no DOM, no I/O. Ported and corrected from the
 // Vertex42-based sheet per the Technical & Data Brief.
 //
@@ -1739,21 +1961,28 @@ table.data-table {
 // Here the starting balance for projection is always SUM(Retirement Cash
 // Value) across ALL vehicles — no hardcoded account list.
 
+// How each vehicle is treated comes from the types table (js/vehicle-types.js),
+// not from category names scattered through this file.
+const VehicleTypes = require('./vehicle-types');
+
+// Not part of the projection: no balance, or a type that never counts (a
+// protection-only policy such as term life, whose premium is a cost, not savings).
 function isProtectionVehicle(vehicle) {
-  return !vehicle.retirementCashValue || vehicle.retirementCashValue <= 0;
+  return !vehicle.retirementCashValue || vehicle.retirementCashValue <= 0 ||
+    VehicleTypes.growthOf(vehicle) === 'none';
 }
 
-// Interest-bearing vehicles (Investment category) compound at the variable rates
-// regardless of whether they have contributions. The rates apply to the balance.
+// Market vehicles (growth: 'market') compound at the variable rates regardless
+// of whether they have contributions. The rates apply to the balance.
 function isInterestBearingVehicle(vehicle) {
-  return vehicle.category === 'Investment';
+  return VehicleTypes.growthOf(vehicle) === 'market';
 }
 
-// Non-interest vehicles (Insurance, Checking/Savings) grow only via contributions,
-// linear accumulation, not compounding at the rates.
+// Contribution-only vehicles (growth: 'contributions') accumulate linearly via
+// their contributions, not compounding at the rates.
 function isNonInterestVehicle(vehicle) {
   return vehicle.retirementCashValue > 0 &&
-    (vehicle.category === 'Insurance' || vehicle.category === 'Checking/Savings');
+    VehicleTypes.growthOf(vehicle) === 'contributions';
 }
 
 // Normalizes a vehicle's contribution to an annual figure regardless of
@@ -2057,8 +2286,10 @@ function computeProjection(config, data) {
     // counted as an account. One rule, shared with the simulation.
     const isExcluded = calculator.isProtectionVehicle(v);
 
+    // How this vehicle grows comes from the types table (js/vehicle-types.js).
+    const vehicleType = VehicleTypes.typeOf(v);
     let projectedBalance = startBalance;
-    if (v.category === 'Investment') {
+    if (vehicleType.growth === 'market') {
       let balance = startBalance;
       const contrib = v.contribution && (v.period === 'Monthly' ? v.contribution * 12 : v.period === 'Annually' ? v.contribution : 0) || 0;
       for (let y = 0; y < yearsToRetirement; y++) {
@@ -2066,7 +2297,7 @@ function computeProjection(config, data) {
         balance = balance * (1 + rate) + contrib;
       }
       projectedBalance = balance;
-    } else if (v.category === 'Insurance' || v.category === 'Checking/Savings') {
+    } else if (vehicleType.growth === 'contributions') {
       const contrib = v.contribution && (v.period === 'Monthly' ? v.contribution * 12 : v.period === 'Annually' ? v.contribution : 0) || 0;
       projectedBalance = startBalance + contrib * yearsToRetirement;
     }
@@ -2075,7 +2306,11 @@ function computeProjection(config, data) {
       id: v.id,
       vehicle: v.vehicle,
       company: v.company,
-      category: v.category,
+      // The parent group, so the donut and the scaling below group as before.
+      category: VehicleTypes.groupOf(v),
+      type: vehicleType.id,
+      typeLabel: vehicleType.label,
+      moneyRole: vehicleType.moneyRole,
       excluded: isExcluded,
       startBalance,
       projectedBalance,
@@ -2177,7 +2412,7 @@ function computeProjection(config, data) {
   const startingBase = data.vehicles.reduce((sum, v) => sum + (v.retirementCashValue || 0), 0);
   const totalBenefit = data.vehicles.reduce((sum, v) => sum + (v.benefit || 0), 0);
   const protectionCost = data.vehicles
-    .filter(v => !v.retirementCashValue || v.retirementCashValue <= 0)
+    .filter(calculator.isProtectionVehicle)
     .reduce((sum, v) => {
       const contrib = v.contribution && (v.period === 'Monthly' ? v.contribution * 12 : v.period === 'Annually' ? v.contribution : 0) || 0;
       return sum + contrib;
@@ -2288,6 +2523,12 @@ function computeProjection(config, data) {
     mem = null;
     location.reload();
   };
+  } catch (err) {
+    // Fail closed: if the demo cannot start, it must never fall back to a real
+    // server API (for example if this file is opened from a running Waypoint).
+    console.error('[demo] failed to initialize', err);
+    window.fetch = function () { return Promise.reject(new Error('Demo failed to initialize')); };
+  }
 })();
 </script>
 <script>
@@ -2818,7 +3059,7 @@ function computeProjection(config, data) {
     state.data.vehicles
       .filter(v => v.retirementCashValue > 0)
       .forEach(v => {
-        const cat = v.category || 'Uncategorized';
+        const cat = VehicleTypes.groupOf(v) || 'Uncategorized';
         if (!groups[cat]) groups[cat] = { total: 0, members: [] };
         groups[cat].total += v.retirementCashValue;
         groups[cat].members.push(v);
@@ -2995,38 +3236,53 @@ function computeProjection(config, data) {
   }
 
   // ── Data tab ───────────────────────────────────────────────────────────
-  // Purely organizational — groups vehicles in the table and the portfolio
-  // chart. Does not feed the projection math (that's driven by RCV /
-  // Contribution / Period / Value Added Contribution, per calculator.js).
-  const CATEGORIES = ['Investment', 'Insurance', 'Checking/Savings', 'Other'];
-  const CATEGORY_ORDER = { Investment: 0, Insurance: 1, 'Checking/Savings': 2, Other: 3 };
+  // Every vehicle has a Type ("Savings", "Life insurance: protection only", ...)
+  // that belongs to a parent group. The Type decides how the projection treats
+  // the vehicle; the full table lives in js/vehicle-types.js. Vehicles saved
+  // before types existed get theirs inferred, so they keep behaving the same.
+  const CATEGORY_ORDER = Object.fromEntries(VehicleTypes.GROUPS.map((g, i) => [g, i]));
 
   const ACCOUNT_FIELDS = [
     { key: 'company', type: 'text' },
     { key: 'vehicle', type: 'text' },
-    { key: 'category', type: 'select', options: ['', ...CATEGORIES] },
+    { key: 'type', type: 'vehicleType' },
     { key: 'benefit', type: 'number' },
   ];
   const CONTRIBUTION_FIELDS = [
     { key: 'contribution', type: 'number' },
     { key: 'period', type: 'select', options: ['', 'Monthly', 'Annually', 'Ad-hoc'] },
-    { key: 'addsToRetirementValue', type: 'checkbox' },
   ];
 
   function renderData() {
     renderVehiclesTable();
     renderCheckinRows();
+    renderTypeLegend();
   }
 
-  // Vehicles sort into category order (Investment, Insurance, Checking/
-  // Savings, Other, then Uncategorized) so like types sit together — the
-  // Category column itself carries that grouping, no separate banner row.
+  // Plain-language guide to every account type, generated from the types table
+  // so the wording here, in the dropdown and in the coach's guide never drifts.
+  function renderTypeLegend() {
+    const body = document.getElementById('type-legend-body');
+    if (!body) return;
+    body.innerHTML = VehicleTypes.GROUPS.map(group => {
+      const rows = VehicleTypes.typesInGroup(group).map(t => `
+        <div class="type-legend-row">
+          <div class="type-legend-name">${escapeHtml(VehicleTypes.displayLabel(t))}</div>
+          <div class="type-legend-help">${escapeHtml(t.help)}</div>
+        </div>`).join('');
+      return rows ? `<div class="type-legend-group">${escapeHtml(group)}</div>${rows}` : '';
+    }).join('');
+  }
+
+  // Vehicles sort into group order (Investment, Insurance, Checking/Savings,
+  // Other, then Uncategorized) so like types sit together — the Type column
+  // itself carries that grouping, no separate banner row.
   function sortedVehiclesWithIndex() {
     return state.data.vehicles
       .map((vehicle, idx) => ({ vehicle, idx }))
       .sort((a, b) => {
-        const ca = a.vehicle.category || 'Uncategorized';
-        const cb = b.vehicle.category || 'Uncategorized';
+        const ca = VehicleTypes.groupOf(a.vehicle) || 'Uncategorized';
+        const cb = VehicleTypes.groupOf(b.vehicle) || 'Uncategorized';
         const oa = CATEGORY_ORDER[ca] != null ? CATEGORY_ORDER[ca] : 99;
         const ob = CATEGORY_ORDER[cb] != null ? CATEGORY_ORDER[cb] : 99;
         return oa - ob;
@@ -3041,7 +3297,7 @@ function computeProjection(config, data) {
     // (a death benefit vs. cash value are genuinely different numbers). For
     // every other category it's the same figure as RCV, so there's nothing
     // to type here — it's auto-mirrored from RCV when a check-in updates it.
-    if (field.key === 'benefit' && vehicle.category !== 'Insurance') {
+    if (field.key === 'benefit' && VehicleTypes.groupOf(vehicle) !== 'Insurance') {
       const span = document.createElement('span');
       span.className = 'cell-readonly cell-na';
       span.textContent = '—';
@@ -3049,14 +3305,38 @@ function computeProjection(config, data) {
       return td;
     }
 
-    // "Builds cash value?" only means something for Insurance (cash value vs.
-    // pure protection). Every other category is told apart by its Category
-    // alone, so there is nothing to check here.
-    if (field.key === 'addsToRetirementValue' && vehicle.category !== 'Insurance') {
-      const span = document.createElement('span');
-      span.className = 'cell-readonly cell-na';
-      span.textContent = '—';
-      td.appendChild(span);
+    // Type: a dropdown grouped by parent category. Picking one also sets the
+    // vehicle's group (`category`), which the donut and sorting read.
+    if (field.type === 'vehicleType') {
+      const select = document.createElement('select');
+      const blank = document.createElement('option');
+      blank.value = '';
+      blank.textContent = '—';
+      select.appendChild(blank);
+      const current = VehicleTypes.inferTypeId(vehicle);
+      VehicleTypes.GROUPS.forEach(group => {
+        const types = VehicleTypes.typesInGroup(group);
+        if (!types.length) return;
+        const og = document.createElement('optgroup');
+        og.label = group;
+        types.forEach(t => {
+          const o = document.createElement('option');
+          o.value = t.id;
+          o.textContent = VehicleTypes.displayLabel(t);
+          if (t.id === current) o.selected = true;
+          og.appendChild(o);
+        });
+        select.appendChild(og);
+      });
+      if (current) select.title = VehicleTypes.byId[current].help;
+      select.addEventListener('input', () => {
+        const t = VehicleTypes.byId[select.value];
+        if (t) { vehicle.type = t.id; vehicle.category = t.group; }
+        else { delete vehicle.type; vehicle.category = ''; }
+        renderVehiclesTable();
+        renderCheckinRows();
+      });
+      td.appendChild(select);
       return td;
     }
 
@@ -3069,22 +3349,7 @@ function computeProjection(config, data) {
         if (vehicle[field.key] === opt) o.selected = true;
         input.appendChild(o);
       });
-      input.addEventListener('input', () => {
-        vehicle[field.key] = input.value;
-        if (field.key === 'category') {
-          // Moving off Insurance clears the cash-value flag so a stale "true"
-          // can't ride along unseen on a non-insurance row.
-          if (input.value !== 'Insurance') vehicle.addsToRetirementValue = false;
-          renderVehiclesTable();
-          renderCheckinRows();
-        }
-      });
-    } else if (field.type === 'checkbox') {
-      input = document.createElement('input');
-      input.type = 'checkbox';
-      input.checked = !!vehicle[field.key];
-      input.className = 'row-checkbox';
-      input.addEventListener('change', () => { vehicle[field.key] = input.checked; });
+      input.addEventListener('input', () => { vehicle[field.key] = input.value; });
     } else {
       input = document.createElement('input');
       input.type = field.type;
@@ -3153,17 +3418,12 @@ function computeProjection(config, data) {
     });
   }
 
-  // Whether a vehicle has any balance worth periodically confirming. Keyed
-  // off Category (and, for Insurance, "Builds cash value?"), not current RCV,
-  // since a brand-new vehicle of a moving-balance type also starts at RCV $0
-  // and still needs to show up here to receive its first real number. Only
-  // pure-protection Insurance (premium is a pure cost, no cash value — e.g.
-  // Term Life) is excluded; everything else belongs in Check-in. An Insurance
-  // policy that already carries a balance always belongs here too, even if the
-  // box was never checked, so its number can't silently go stale.
+  // Whether a vehicle has any balance worth periodically confirming. The types
+  // table decides: pure-protection types (term life, whose premium is a cost
+  // with no cash value) never need one. A vehicle that already carries a
+  // balance always belongs here, so its number can't silently go stale.
   function needsCheckIn(vehicle) {
-    if (vehicle.category !== 'Insurance') return true;
-    return !!vehicle.addsToRetirementValue || (vehicle.retirementCashValue || 0) > 0;
+    return VehicleTypes.typeOf(vehicle).needsCheckIn || (vehicle.retirementCashValue || 0) > 0;
   }
 
   // The most recent snapshot logged for a vehicle, if any — used to answer
@@ -3173,6 +3433,11 @@ function computeProjection(config, data) {
     const rows = state.data.snapshots.filter(s => s.vehicleId === vehicleId);
     if (!rows.length) return null;
     return rows.reduce((latest, s) => (s.date > latest.date ? s : latest), rows[0]);
+  }
+
+  function vehicleTypeLabel(vehicle) {
+    const id = VehicleTypes.inferTypeId(vehicle);
+    return id ? VehicleTypes.byId[id].label : '—';
   }
 
   function renderCheckinRows() {
@@ -3195,7 +3460,7 @@ function computeProjection(config, data) {
       tr.innerHTML = `
         <td>${escapeHtml(vehicle.company || '—')}</td>
         <td>${escapeHtml(vehicle.vehicle || '—')}</td>
-        <td>${escapeHtml(vehicle.category || '—')}</td>
+        <td>${escapeHtml(vehicleTypeLabel(vehicle))}</td>
         <td>
           ${escapeHtml(fmtCurrency(vehicle.retirementCashValue || 0))}
           <div class="cell-sub">${escapeHtml(lastBalanceSub)}</div>
@@ -3219,9 +3484,8 @@ function computeProjection(config, data) {
     document.getElementById('add-vehicle-btn').addEventListener('click', () => {
       state.data.vehicles.push({
         id: uid('veh'),
-        company: '', vehicle: '', category: '', benefit: 0,
+        company: '', vehicle: '', category: '', type: '', benefit: 0,
         retirementCashValue: 0, contribution: 0, period: '',
-        addsToRetirementValue: false,
       });
       renderVehiclesTable();
       renderCheckinRows();
@@ -3256,7 +3520,7 @@ function computeProjection(config, data) {
         // cash value are genuinely different numbers there); for every
         // other category they're the same figure, kept in sync here so
         // there's nothing to double-enter in the Data tab.
-        if (vehicle.category !== 'Insurance') vehicle.benefit = newBalance;
+        if (VehicleTypes.groupOf(vehicle) !== 'Insurance') vehicle.benefit = newBalance;
         changedAny = true;
       });
 

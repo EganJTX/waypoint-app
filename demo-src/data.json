@@ -9,7 +9,7 @@
       "retirementCashValue": 5678.32,
       "contribution": 0,
       "period": "",
-      "addsToRetirementValue": false
+      "type": "checking"
     },
     {
       "id": "veh_jd_sav",
@@ -20,7 +20,7 @@
       "retirementCashValue": 10412.95,
       "contribution": 750,
       "period": "Monthly",
-      "addsToRetirementValue": false
+      "type": "savings"
     },
     {
       "id": "veh_jd_term",
@@ -31,7 +31,7 @@
       "retirementCashValue": 0,
       "contribution": 900,
       "period": "Annually",
-      "addsToRetirementValue": false
+      "type": "term_life"
     },
     {
       "id": "veh_jd_whole",
@@ -42,7 +42,7 @@
       "retirementCashValue": 43000,
       "contribution": 500,
       "period": "Monthly",
-      "addsToRetirementValue": true
+      "type": "cash_value_life"
     },
     {
       "id": "veh_jd_401k",
@@ -53,7 +53,7 @@
       "retirementCashValue": 126472,
       "contribution": 500,
       "period": "Monthly",
-      "addsToRetirementValue": false
+      "type": "investment"
     },
     {
       "id": "veh_jd_529",
@@ -64,7 +64,7 @@
       "retirementCashValue": 35000,
       "contribution": 250,
       "period": "Monthly",
-      "addsToRetirementValue": false
+      "type": "savings"
     }
   ],
   "snapshots": [],

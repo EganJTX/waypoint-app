@@ -525,7 +525,7 @@
     state.data.vehicles
       .filter(v => v.retirementCashValue > 0)
       .forEach(v => {
-        const cat = v.category || 'Uncategorized';
+        const cat = VehicleTypes.groupOf(v) || 'Uncategorized';
         if (!groups[cat]) groups[cat] = { total: 0, members: [] };
         groups[cat].total += v.retirementCashValue;
         groups[cat].members.push(v);
@@ -702,38 +702,53 @@
   }
 
   // ── Data tab ───────────────────────────────────────────────────────────
-  // Purely organizational — groups vehicles in the table and the portfolio
-  // chart. Does not feed the projection math (that's driven by RCV /
-  // Contribution / Period / Value Added Contribution, per calculator.js).
-  const CATEGORIES = ['Investment', 'Insurance', 'Checking/Savings', 'Other'];
-  const CATEGORY_ORDER = { Investment: 0, Insurance: 1, 'Checking/Savings': 2, Other: 3 };
+  // Every vehicle has a Type ("Savings", "Life insurance: protection only", ...)
+  // that belongs to a parent group. The Type decides how the projection treats
+  // the vehicle; the full table lives in js/vehicle-types.js. Vehicles saved
+  // before types existed get theirs inferred, so they keep behaving the same.
+  const CATEGORY_ORDER = Object.fromEntries(VehicleTypes.GROUPS.map((g, i) => [g, i]));
 
   const ACCOUNT_FIELDS = [
     { key: 'company', type: 'text' },
     { key: 'vehicle', type: 'text' },
-    { key: 'category', type: 'select', options: ['', ...CATEGORIES] },
+    { key: 'type', type: 'vehicleType' },
     { key: 'benefit', type: 'number' },
   ];
   const CONTRIBUTION_FIELDS = [
     { key: 'contribution', type: 'number' },
     { key: 'period', type: 'select', options: ['', 'Monthly', 'Annually', 'Ad-hoc'] },
-    { key: 'addsToRetirementValue', type: 'checkbox' },
   ];
 
   function renderData() {
     renderVehiclesTable();
     renderCheckinRows();
+    renderTypeLegend();
   }
 
-  // Vehicles sort into category order (Investment, Insurance, Checking/
-  // Savings, Other, then Uncategorized) so like types sit together — the
-  // Category column itself carries that grouping, no separate banner row.
+  // Plain-language guide to every account type, generated from the types table
+  // so the wording here, in the dropdown and in the coach's guide never drifts.
+  function renderTypeLegend() {
+    const body = document.getElementById('type-legend-body');
+    if (!body) return;
+    body.innerHTML = VehicleTypes.GROUPS.map(group => {
+      const rows = VehicleTypes.typesInGroup(group).map(t => `
+        <div class="type-legend-row">
+          <div class="type-legend-name">${escapeHtml(VehicleTypes.displayLabel(t))}</div>
+          <div class="type-legend-help">${escapeHtml(t.help)}</div>
+        </div>`).join('');
+      return rows ? `<div class="type-legend-group">${escapeHtml(group)}</div>${rows}` : '';
+    }).join('');
+  }
+
+  // Vehicles sort into group order (Investment, Insurance, Checking/Savings,
+  // Other, then Uncategorized) so like types sit together — the Type column
+  // itself carries that grouping, no separate banner row.
   function sortedVehiclesWithIndex() {
     return state.data.vehicles
       .map((vehicle, idx) => ({ vehicle, idx }))
       .sort((a, b) => {
-        const ca = a.vehicle.category || 'Uncategorized';
-        const cb = b.vehicle.category || 'Uncategorized';
+        const ca = VehicleTypes.groupOf(a.vehicle) || 'Uncategorized';
+        const cb = VehicleTypes.groupOf(b.vehicle) || 'Uncategorized';
         const oa = CATEGORY_ORDER[ca] != null ? CATEGORY_ORDER[ca] : 99;
         const ob = CATEGORY_ORDER[cb] != null ? CATEGORY_ORDER[cb] : 99;
         return oa - ob;
@@ -748,7 +763,7 @@
     // (a death benefit vs. cash value are genuinely different numbers). For
     // every other category it's the same figure as RCV, so there's nothing
     // to type here — it's auto-mirrored from RCV when a check-in updates it.
-    if (field.key === 'benefit' && vehicle.category !== 'Insurance') {
+    if (field.key === 'benefit' && VehicleTypes.groupOf(vehicle) !== 'Insurance') {
       const span = document.createElement('span');
       span.className = 'cell-readonly cell-na';
       span.textContent = '—';
@@ -756,14 +771,38 @@
       return td;
     }
 
-    // "Builds cash value?" only means something for Insurance (cash value vs.
-    // pure protection). Every other category is told apart by its Category
-    // alone, so there is nothing to check here.
-    if (field.key === 'addsToRetirementValue' && vehicle.category !== 'Insurance') {
-      const span = document.createElement('span');
-      span.className = 'cell-readonly cell-na';
-      span.textContent = '—';
-      td.appendChild(span);
+    // Type: a dropdown grouped by parent category. Picking one also sets the
+    // vehicle's group (`category`), which the donut and sorting read.
+    if (field.type === 'vehicleType') {
+      const select = document.createElement('select');
+      const blank = document.createElement('option');
+      blank.value = '';
+      blank.textContent = '—';
+      select.appendChild(blank);
+      const current = VehicleTypes.inferTypeId(vehicle);
+      VehicleTypes.GROUPS.forEach(group => {
+        const types = VehicleTypes.typesInGroup(group);
+        if (!types.length) return;
+        const og = document.createElement('optgroup');
+        og.label = group;
+        types.forEach(t => {
+          const o = document.createElement('option');
+          o.value = t.id;
+          o.textContent = VehicleTypes.displayLabel(t);
+          if (t.id === current) o.selected = true;
+          og.appendChild(o);
+        });
+        select.appendChild(og);
+      });
+      if (current) select.title = VehicleTypes.byId[current].help;
+      select.addEventListener('input', () => {
+        const t = VehicleTypes.byId[select.value];
+        if (t) { vehicle.type = t.id; vehicle.category = t.group; }
+        else { delete vehicle.type; vehicle.category = ''; }
+        renderVehiclesTable();
+        renderCheckinRows();
+      });
+      td.appendChild(select);
       return td;
     }
 
@@ -776,22 +815,7 @@
         if (vehicle[field.key] === opt) o.selected = true;
         input.appendChild(o);
       });
-      input.addEventListener('input', () => {
-        vehicle[field.key] = input.value;
-        if (field.key === 'category') {
-          // Moving off Insurance clears the cash-value flag so a stale "true"
-          // can't ride along unseen on a non-insurance row.
-          if (input.value !== 'Insurance') vehicle.addsToRetirementValue = false;
-          renderVehiclesTable();
-          renderCheckinRows();
-        }
-      });
-    } else if (field.type === 'checkbox') {
-      input = document.createElement('input');
-      input.type = 'checkbox';
-      input.checked = !!vehicle[field.key];
-      input.className = 'row-checkbox';
-      input.addEventListener('change', () => { vehicle[field.key] = input.checked; });
+      input.addEventListener('input', () => { vehicle[field.key] = input.value; });
     } else {
       input = document.createElement('input');
       input.type = field.type;
@@ -860,17 +884,12 @@
     });
   }
 
-  // Whether a vehicle has any balance worth periodically confirming. Keyed
-  // off Category (and, for Insurance, "Builds cash value?"), not current RCV,
-  // since a brand-new vehicle of a moving-balance type also starts at RCV $0
-  // and still needs to show up here to receive its first real number. Only
-  // pure-protection Insurance (premium is a pure cost, no cash value — e.g.
-  // Term Life) is excluded; everything else belongs in Check-in. An Insurance
-  // policy that already carries a balance always belongs here too, even if the
-  // box was never checked, so its number can't silently go stale.
+  // Whether a vehicle has any balance worth periodically confirming. The types
+  // table decides: pure-protection types (term life, whose premium is a cost
+  // with no cash value) never need one. A vehicle that already carries a
+  // balance always belongs here, so its number can't silently go stale.
   function needsCheckIn(vehicle) {
-    if (vehicle.category !== 'Insurance') return true;
-    return !!vehicle.addsToRetirementValue || (vehicle.retirementCashValue || 0) > 0;
+    return VehicleTypes.typeOf(vehicle).needsCheckIn || (vehicle.retirementCashValue || 0) > 0;
   }
 
   // The most recent snapshot logged for a vehicle, if any — used to answer
@@ -880,6 +899,11 @@
     const rows = state.data.snapshots.filter(s => s.vehicleId === vehicleId);
     if (!rows.length) return null;
     return rows.reduce((latest, s) => (s.date > latest.date ? s : latest), rows[0]);
+  }
+
+  function vehicleTypeLabel(vehicle) {
+    const id = VehicleTypes.inferTypeId(vehicle);
+    return id ? VehicleTypes.byId[id].label : '—';
   }
 
   function renderCheckinRows() {
@@ -902,7 +926,7 @@
       tr.innerHTML = `
         <td>${escapeHtml(vehicle.company || '—')}</td>
         <td>${escapeHtml(vehicle.vehicle || '—')}</td>
-        <td>${escapeHtml(vehicle.category || '—')}</td>
+        <td>${escapeHtml(vehicleTypeLabel(vehicle))}</td>
         <td>
           ${escapeHtml(fmtCurrency(vehicle.retirementCashValue || 0))}
           <div class="cell-sub">${escapeHtml(lastBalanceSub)}</div>
@@ -926,9 +950,8 @@
     document.getElementById('add-vehicle-btn').addEventListener('click', () => {
       state.data.vehicles.push({
         id: uid('veh'),
-        company: '', vehicle: '', category: '', benefit: 0,
+        company: '', vehicle: '', category: '', type: '', benefit: 0,
         retirementCashValue: 0, contribution: 0, period: '',
-        addsToRetirementValue: false,
       });
       renderVehiclesTable();
       renderCheckinRows();
@@ -963,7 +986,7 @@
         // cash value are genuinely different numbers there); for every
         // other category they're the same figure, kept in sync here so
         // there's nothing to double-enter in the Data tab.
-        if (vehicle.category !== 'Insurance') vehicle.benefit = newBalance;
+        if (VehicleTypes.groupOf(vehicle) !== 'Insurance') vehicle.benefit = newBalance;
         changedAny = true;
       });
 

@@ -1282,3 +1282,37 @@ table.data-table {
   .form-grid { grid-template-columns: 1fr; }
   .container, .page-body, .topbar { padding-left: 18px; padding-right: 18px; }
 }
+
+
+/* Account types legend (Data tab) — plain-language guide under the vehicle tables */
+.type-legend {
+  margin-top: 14px;
+  font-size: 12.5px;
+}
+.type-legend summary {
+  cursor: pointer;
+  color: var(--coach-amber);
+  font-weight: 600;
+  width: fit-content;
+}
+.type-legend[open] summary { margin-bottom: 10px; }
+.type-legend-group {
+  margin: 12px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-text);
+}
+.type-legend-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) 1fr;
+  gap: 4px 20px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(215, 225, 234, 0.08);
+}
+.type-legend-name { font-weight: 600; }
+.type-legend-help { color: var(--muted-text); line-height: 1.5; }
+@media (max-width: 720px) {
+  .type-legend-row { grid-template-columns: 1fr; }
+}

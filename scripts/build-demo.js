@@ -29,6 +29,7 @@ if (start < 0 || end < 0) throw new Error('Could not locate projection code in s
 const projectionCode = serverSrc.slice(start, end);
 
 const calculatorSrc = read('js/calculator.js');
+const vehicleTypesSrc = read('js/vehicle-types.js');
 
 const fixtures = {
   config: JSON.parse(read('demo-src/config.json')),
@@ -44,6 +45,7 @@ const DEMO_COACH_MESSAGE =
 const shim = `
 (function () {
   'use strict';
+  try {
   // Fictional demo only. No requests leave this page: window.fetch is replaced
   // so every call the app makes to its own API is answered from the fixtures
   // below, with edits kept in this browser's localStorage.
@@ -51,8 +53,19 @@ const shim = `
   const SEED = ${safeScript(JSON.stringify(fixtures))};
   const DEMO_COACH_MESSAGE = ${JSON.stringify(DEMO_COACH_MESSAGE)};
 
+  // The types table (js/vehicle-types.js) decides how every vehicle is treated.
+  // The projection code below and app.js both read it; app.js via window.
+  const VehicleTypes = (function () {
+    const module = { exports: {} };
+    ${safeScript(vehicleTypesSrc)}
+    return module.exports;
+  })();
+  window.VehicleTypes = VehicleTypes;
+  const typesForCalculator = VehicleTypes; // calculator.js declares its own VehicleTypes, so hand it this alias
+
   const calculator = (function () {
     const module = { exports: {} };
+    const require = () => typesForCalculator; // calculator.js's only require is the types table
     ${safeScript(calculatorSrc)}
     return module.exports;
   })();
@@ -138,6 +151,12 @@ const shim = `
     mem = null;
     location.reload();
   };
+  } catch (err) {
+    // Fail closed: if the demo cannot start, it must never fall back to a real
+    // server API (for example if this file is opened from a running Waypoint).
+    console.error('[demo] failed to initialize', err);
+    window.fetch = function () { return Promise.reject(new Error('Demo failed to initialize')); };
+  }
 })();
 `;
 
@@ -168,10 +187,12 @@ if (!appJs.includes("status.style.color = '#B8783D'")) throw new Error("app.js c
 // The projection-chart fixes (axis trim, callout placement/yield, hover dots,
 // hover guide, tooltip layering) now live in js/app.js itself, so the demo
 // inherits them. Fail loudly if they ever get lost.
-for (const marker of ['horizonLen', "id: 'calloutYield'", "id: 'hoverGuide'", 'pointHoverRadius: 0', 'beforeDatasetsDraw(chart)']) {
+for (const marker of ['VehicleTypes', 'horizonLen', "id: 'calloutYield'", "id: 'hoverGuide'", 'pointHoverRadius: 0', 'beforeDatasetsDraw(chart)']) {
   if (!appJs.includes(marker)) throw new Error('js/app.js is missing chart fix marker: ' + marker);
 }
 
+// The types table is already inlined above (the demo is a single file).
+swap('<script src="js/vehicle-types.js"></script>\n', '');
 swap('<script src="js/app.js"></script>', `<script>${shim}</script>\n<script>\n${safeScript(appJs)}\n</script>`);
 
 const out = path.join(ROOT, 'demo.html');

@@ -35,8 +35,20 @@ The Coach needs the `claude` CLI installed and signed in on your machine. Withou
 - **Simulation, not a guess.** The chart shows the median of 250 simulated paths, plus a band for the middle 60% of outcomes. The simulation is seeded, so the same data always produces the same numbers.
 - **Recomputed at check-in.** The projection is calculated when you log a check-in and then saved, so Waypoint can later compare what it predicted against what actually happened. Plain page loads don't recompute it.
 - **Trajectory.** *Ahead*, *On Track*, or *Worth Review* is based on the age your projection first reaches your target number, compared with the retirement age you want. It's a prompt to look closer, not a verdict.
-- **Simplified account model (v1).** Only **Investment** accounts (401k, IRA, brokerage) grow at the market-rate range you set in Configuration. **Insurance cash value** and **Checking/Savings** accounts are carried forward with their contributions only. Real accounts usually grow more than that, so the projection is conservative for them.
-- **Two kinds of insurance.** *Protection-only* policies (term life) are your family's safety net: they hold no cash value, their premium is a cost and not savings, and they're left out of the projection. *Cash value* policies (whole life, paid-up life) carry a death benefit and a growing balance, and are included. Their contributions are treated as steady linear growth, since the cap on a policy is unknown. On the Data tab, the **Builds Cash Value?** box applies to Insurance only and marks which kind a policy is. Every other category is told apart by its Category alone.
+- **Every account has a Type.** You pick one on the Data tab, grouped under a parent category, with plain-language help for each. The Type decides how the projection treats the account. Here is the full table (it lives in one place, `js/vehicle-types.js`, and everything else reads from it, including the coach):
+
+| Group | Type | How the projection treats it | Counts toward retirement |
+|---|---|---|---|
+| Investment | Investment account (401k, IRA, brokerage) | Market simulation (4–10% range you set) | Yes |
+| Insurance | Life insurance: builds cash value (whole life, universal, paid-up) | Contributions only, no growth | Yes |
+| Insurance | Life insurance: protection only (term life) | Left out of the projection | No |
+| Checking/Savings | Checking | Contributions only, no growth | Yes |
+| Checking/Savings | Savings | Contributions only, no growth | Yes |
+| Other | Other | Held at current balance | Yes |
+
+- **A simplified model (v1).** Only Investment accounts grow at the market-rate range. Cash value insurance, savings and checking are carried forward with their contributions only, which is a steady straight line, because real caps and rates are unknown. Real accounts usually grow more, so the projection is conservative for them.
+- **Protection-only insurance.** Term life is your family's safety net. It holds no cash value, its premium is a cost and not savings, and it's left out of the projection. Whole life and similar policies build cash value and are included.
+- **Adding a new kind of account** (a 529 plan, an HSA, ...) means adding one row to the table in `js/vehicle-types.js`. Nothing else needs to change.
 
 ## Data and privacy
 
@@ -69,10 +81,12 @@ The build inlines the app's own `index.html`, CSS, and JavaScript and uses the f
 | Path | What it is |
 |---|---|
 | `index.html`, `css/`, `js/app.js` | The interface (Presentation, Data, Configuration) |
+| `js/vehicle-types.js` | The account types table: one place that defines how every kind of account is treated |
 | `js/calculator.js` | The projection engine: simulation, percentiles, inflation |
 | `server.js` | Local API and persistence |
 | `scripts/coach-analyze.js`, `scripts/coach-shared.js` | The Coach: prompt, Claude CLI call, validation, history |
 | `scripts/build-demo.js`, `demo-src/` | Builds `demo.html` from fictional fixtures |
+| `docs/design-notes.md` | Ideas that are intentionally not built yet |
 
 ## License
 

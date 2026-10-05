@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const calculator = require('./js/calculator');
+const VehicleTypes = require('./js/vehicle-types');
 
 const app = express();
 
@@ -195,8 +196,10 @@ function computeProjection(config, data) {
     // counted as an account. One rule, shared with the simulation.
     const isExcluded = calculator.isProtectionVehicle(v);
 
+    // How this vehicle grows comes from the types table (js/vehicle-types.js).
+    const vehicleType = VehicleTypes.typeOf(v);
     let projectedBalance = startBalance;
-    if (v.category === 'Investment') {
+    if (vehicleType.growth === 'market') {
       let balance = startBalance;
       const contrib = v.contribution && (v.period === 'Monthly' ? v.contribution * 12 : v.period === 'Annually' ? v.contribution : 0) || 0;
       for (let y = 0; y < yearsToRetirement; y++) {
@@ -204,7 +207,7 @@ function computeProjection(config, data) {
         balance = balance * (1 + rate) + contrib;
       }
       projectedBalance = balance;
-    } else if (v.category === 'Insurance' || v.category === 'Checking/Savings') {
+    } else if (vehicleType.growth === 'contributions') {
       const contrib = v.contribution && (v.period === 'Monthly' ? v.contribution * 12 : v.period === 'Annually' ? v.contribution : 0) || 0;
       projectedBalance = startBalance + contrib * yearsToRetirement;
     }
@@ -213,7 +216,11 @@ function computeProjection(config, data) {
       id: v.id,
       vehicle: v.vehicle,
       company: v.company,
-      category: v.category,
+      // The parent group, so the donut and the scaling below group as before.
+      category: VehicleTypes.groupOf(v),
+      type: vehicleType.id,
+      typeLabel: vehicleType.label,
+      moneyRole: vehicleType.moneyRole,
       excluded: isExcluded,
       startBalance,
       projectedBalance,
@@ -315,7 +322,7 @@ function computeProjection(config, data) {
   const startingBase = data.vehicles.reduce((sum, v) => sum + (v.retirementCashValue || 0), 0);
   const totalBenefit = data.vehicles.reduce((sum, v) => sum + (v.benefit || 0), 0);
   const protectionCost = data.vehicles
-    .filter(v => !v.retirementCashValue || v.retirementCashValue <= 0)
+    .filter(calculator.isProtectionVehicle)
     .reduce((sum, v) => {
       const contrib = v.contribution && (v.period === 'Monthly' ? v.contribution * 12 : v.period === 'Annually' ? v.contribution : 0) || 0;
       return sum + contrib;

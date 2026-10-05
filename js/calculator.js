@@ -6,21 +6,28 @@
 // Here the starting balance for projection is always SUM(Retirement Cash
 // Value) across ALL vehicles — no hardcoded account list.
 
+// How each vehicle is treated comes from the types table (js/vehicle-types.js),
+// not from category names scattered through this file.
+const VehicleTypes = require('./vehicle-types');
+
+// Not part of the projection: no balance, or a type that never counts (a
+// protection-only policy such as term life, whose premium is a cost, not savings).
 function isProtectionVehicle(vehicle) {
-  return !vehicle.retirementCashValue || vehicle.retirementCashValue <= 0;
+  return !vehicle.retirementCashValue || vehicle.retirementCashValue <= 0 ||
+    VehicleTypes.growthOf(vehicle) === 'none';
 }
 
-// Interest-bearing vehicles (Investment category) compound at the variable rates
-// regardless of whether they have contributions. The rates apply to the balance.
+// Market vehicles (growth: 'market') compound at the variable rates regardless
+// of whether they have contributions. The rates apply to the balance.
 function isInterestBearingVehicle(vehicle) {
-  return vehicle.category === 'Investment';
+  return VehicleTypes.growthOf(vehicle) === 'market';
 }
 
-// Non-interest vehicles (Insurance, Checking/Savings) grow only via contributions,
-// linear accumulation, not compounding at the rates.
+// Contribution-only vehicles (growth: 'contributions') accumulate linearly via
+// their contributions, not compounding at the rates.
 function isNonInterestVehicle(vehicle) {
   return vehicle.retirementCashValue > 0 &&
-    (vehicle.category === 'Insurance' || vehicle.category === 'Checking/Savings');
+    VehicleTypes.growthOf(vehicle) === 'contributions';
 }
 
 // Normalizes a vehicle's contribution to an annual figure regardless of
