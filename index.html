@@ -235,7 +235,7 @@
           <strong>Category</strong> — groups this vehicle for the portfolio breakdown (Investment / Insurance / Checking/Savings). Organizational only — doesn't affect the math.<br/>
           <strong>Benefit</strong> — payout if cashed out/claimed today. Net-worth context only, not counted in the projection. Only editable for Insurance — for every other category it's the same number as the account's balance, so it's shown as "—" and kept in sync automatically from Log a Check-in.<br/>
           <strong>Contribution — Amount / Frequency</strong> — how much you add on a recurring basis, and how often. Leave Amount at 0 for irregular accounts.<br/>
-          <strong>Contribution — Adds to Retirement Cash?</strong> — check this only if the contribution itself builds cash value that counts toward RCV (e.g. whole life premiums). Leave unchecked if it's a pure cost with no accreting value (e.g. term life premiums), or if this is a regular market account (the contribution already flows into RCV growth directly).
+          <strong>Contribution — Builds Cash Value?</strong> — Insurance only. Check this for a policy that builds cash value you could draw on (e.g. whole life, paid-up life). Leave it unchecked for pure protection, where the premium is a cost with no cash value (e.g. term life). Other categories don't use this, so it shows "—".
         </span></span>
       </div>
       <p class="util-panel-desc">Retirement Cash Value (RCV) — a vehicle's current balance — drives the projection math, and is set and updated entirely through Log a Check-in below, never here. A vehicle whose balance is $0 (and stays $0) is treated as protection-only and excluded from the projection, but still shown for full net-worth context via Benefit.</p>
@@ -262,7 +262,7 @@
               <tr>
                 <th>Amount</th>
                 <th>Frequency</th>
-                <th>Adds to Retirement Cash?</th>
+                <th>Builds Cash Value?</th>
                 <th></th>
               </tr>
             </thead>

@@ -1529,7 +1529,7 @@ table.data-table {
           <strong>Category</strong> — groups this vehicle for the portfolio breakdown (Investment / Insurance / Checking/Savings). Organizational only — doesn't affect the math.<br/>
           <strong>Benefit</strong> — payout if cashed out/claimed today. Net-worth context only, not counted in the projection. Only editable for Insurance — for every other category it's the same number as the account's balance, so it's shown as "—" and kept in sync automatically from Log a Check-in.<br/>
           <strong>Contribution — Amount / Frequency</strong> — how much you add on a recurring basis, and how often. Leave Amount at 0 for irregular accounts.<br/>
-          <strong>Contribution — Adds to Retirement Cash?</strong> — check this only if the contribution itself builds cash value that counts toward RCV (e.g. whole life premiums). Leave unchecked if it's a pure cost with no accreting value (e.g. term life premiums), or if this is a regular market account (the contribution already flows into RCV growth directly).
+          <strong>Contribution — Builds Cash Value?</strong> — Insurance only. Check this for a policy that builds cash value you could draw on (e.g. whole life, paid-up life). Leave it unchecked for pure protection, where the premium is a cost with no cash value (e.g. term life). Other categories don't use this, so it shows "—".
         </span></span>
       </div>
       <p class="util-panel-desc">Retirement Cash Value (RCV) — a vehicle's current balance — drives the projection math, and is set and updated entirely through Log a Check-in below, never here. A vehicle whose balance is $0 (and stays $0) is treated as protection-only and excluded from the projection, but still shown for full net-worth context via Benefit.</p>
@@ -1556,7 +1556,7 @@ table.data-table {
               <tr>
                 <th>Amount</th>
                 <th>Frequency</th>
-                <th>Adds to Retirement Cash?</th>
+                <th>Builds Cash Value?</th>
                 <th></th>
               </tr>
             </thead>
@@ -3049,6 +3049,17 @@ function computeProjection(config, data) {
       return td;
     }
 
+    // "Builds cash value?" only means something for Insurance (cash value vs.
+    // pure protection). Every other category is told apart by its Category
+    // alone, so there is nothing to check here.
+    if (field.key === 'addsToRetirementValue' && vehicle.category !== 'Insurance') {
+      const span = document.createElement('span');
+      span.className = 'cell-readonly cell-na';
+      span.textContent = '—';
+      td.appendChild(span);
+      return td;
+    }
+
     if (field.type === 'select') {
       input = document.createElement('select');
       field.options.forEach(opt => {
@@ -3060,7 +3071,13 @@ function computeProjection(config, data) {
       });
       input.addEventListener('input', () => {
         vehicle[field.key] = input.value;
-        if (field.key === 'category') { renderVehiclesTable(); renderCheckinRows(); }
+        if (field.key === 'category') {
+          // Moving off Insurance clears the cash-value flag so a stale "true"
+          // can't ride along unseen on a non-insurance row.
+          if (input.value !== 'Insurance') vehicle.addsToRetirementValue = false;
+          renderVehiclesTable();
+          renderCheckinRows();
+        }
       });
     } else if (field.type === 'checkbox') {
       input = document.createElement('input');
@@ -3137,15 +3154,16 @@ function computeProjection(config, data) {
   }
 
   // Whether a vehicle has any balance worth periodically confirming. Keyed
-  // off Category + the Contribution checkbox — both set at creation — not
-  // current RCV, since a brand-new vehicle of a moving-balance type also
-  // starts at RCV $0 and still needs to show up here to receive its first
-  // real number. Only pure-protection Insurance (premium is a pure cost,
-  // no cash value ever — e.g. Term Life) is excluded; everything else
-  // (Investment, Checking/Savings, Other, and cash-value Insurance like
-  // Whole Life) has a balance that can move and belongs in Check-in.
+  // off Category (and, for Insurance, "Builds cash value?"), not current RCV,
+  // since a brand-new vehicle of a moving-balance type also starts at RCV $0
+  // and still needs to show up here to receive its first real number. Only
+  // pure-protection Insurance (premium is a pure cost, no cash value — e.g.
+  // Term Life) is excluded; everything else belongs in Check-in. An Insurance
+  // policy that already carries a balance always belongs here too, even if the
+  // box was never checked, so its number can't silently go stale.
   function needsCheckIn(vehicle) {
-    return !(vehicle.category === 'Insurance' && !vehicle.addsToRetirementValue);
+    if (vehicle.category !== 'Insurance') return true;
+    return !!vehicle.addsToRetirementValue || (vehicle.retirementCashValue || 0) > 0;
   }
 
   // The most recent snapshot logged for a vehicle, if any — used to answer
