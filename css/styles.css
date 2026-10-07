@@ -109,8 +109,8 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 .brand-mark {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   display: block;
   flex-shrink: 0;
 }

@@ -170,6 +170,8 @@ const swap = (from, to) => {
 swap('<title>Waypoint</title>', '<title>Waypoint (Demo)</title>');
 swap('<link rel="icon" href="assets/logo.png" />', `<link rel="icon" href="${dataUri('assets/logo.png', 'image/png')}" />`);
 swap('src="assets/hero.png"', `src="${dataUri('assets/hero.png', 'image/png')}"`);
+// The header logo is a swappable file; inline whichever one is active at build time.
+swap('src="assets/brand-mark.png"', `src="${dataUri('assets/brand-mark.png', 'image/png')}"`);
 swap('<link rel="stylesheet" href="css/styles.css" />', `<style>\n${read('css/styles.css')}\n.demo-hero-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}\n.demo-badge{display:inline-block;padding:3px 10px;border-radius:999px;background:#B8783D;color:#fff;font:600 10.5px/1.4 Inter,sans-serif;letter-spacing:.08em;vertical-align:middle}\n.demo-reset{padding:0;background:none;border:0;color:var(--coach-amber);opacity:.85;font:500 11px Inter,sans-serif;letter-spacing:.02em;text-decoration:underline;cursor:pointer}\n.demo-reset:hover{opacity:1}\n</style>`);
 // The demo badge and reset link ride in the hero, next to the amber greeting
 // (app.js rewrites #hero-eyebrow's text, so they live beside it, not inside it).
