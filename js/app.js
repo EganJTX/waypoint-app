@@ -158,7 +158,7 @@
 
     const inflationRate = state.config && state.config.inflationRate != null
       ? state.config.inflationRate
-      : 0.025;
+      : window.HistoricalReturns.DEFAULT_INFLATION;
     const inflationFactor = Math.pow(1 + inflationRate, projection.yearsToRetirement);
     const medianTodaysDollars = medianAtTarget / inflationFactor;
     const incomeTodaysDollars = projectedAnnualIncome / inflationFactor;
@@ -197,8 +197,122 @@
     document.getElementById('metric-withdrawal-range-caption').textContent = rangeCaption;
 
 
+    renderStaleNote();
+    // Detail needs the market stats recorded when the projection was built;
+    // a projection saved before that has none until it is updated.
+    document.getElementById('detail-btn').classList.toggle('hidden', !(mc && mc.marketStats));
+
     // Load and render coach analysis
     loadCoachAnalysis().then(() => renderCoachPanel(projection, config));
+  }
+
+  // ── Detail: where the projected number comes from, year by year ──────
+  // Everything shown is read from the saved projection (the median, downside
+  // and upside balance for each year, and the market stats recorded with it),
+  // so the last row is the same number as the headline.
+
+  function detailRows(projection) {
+    const mc = projection.monteCarlo;
+    const startYear = new Date(projection.computedAt).getFullYear();
+    const rows = [];
+    for (let y = 0; y <= projection.yearsToRetirement; y++) {
+      rows.push({
+        year: startYear + y,
+        age: projection.currentAge != null ? projection.currentAge + y : '',
+        added: y === 0 ? null : mc.median[y] - mc.median[y - 1],
+        median: mc.median[y],
+        // Today there is no band yet: all three are the current balance.
+        downside: y === 0 ? null : mc.p20[y],
+        upside: y === 0 ? null : mc.p80[y],
+      });
+    }
+    return rows;
+  }
+
+  function openDetailModal() {
+    const projection = state.projection;
+    const mc = projection && projection.monteCarlo;
+    if (!mc || !mc.marketStats) return;
+    const stats = mc.marketStats;
+    const rows = detailRows(projection);
+
+    // The cost is the difference of the two rounded figures shown beside it,
+    // so the three cards always tie out on screen.
+    const avg = Math.round(stats.averageRate * 1000) / 10;
+    const compound = Math.round(stats.compoundMedianRate * 1000) / 10;
+    document.getElementById('detail-avg').textContent = avg.toFixed(1) + '%';
+    document.getElementById('detail-compound').textContent = compound.toFixed(1) + '%';
+    document.getElementById('detail-cost').textContent = '-' + (Math.round((avg - compound) * 10) / 10).toFixed(1) + '%';
+
+    const oneIn = stats.lossShare > 0 ? Math.round(1 / stats.lossShare) : 0;
+    const pctWhole = n => (n < 0 ? '-' : '+') + Math.abs(Math.round(n * 100)) + '%';
+    document.getElementById('detail-tagline').textContent =
+      (oneIn ? `About 1 in ${oneIn} years lost money. ` : '') +
+      `Worst year ${pctWhole(stats.worstYear)}, best year ${pctWhole(stats.bestYear)}.`;
+
+    document.getElementById('detail-rows').innerHTML = rows.map(r => `
+      <tr>
+        <td>${r.year}</td>
+        <td>${r.age}</td>
+        <td class="num ${r.added == null ? 'none' : ''}">${r.added == null ? '&mdash;' : '+' + fmtCurrency(r.added)}</td>
+        <td class="num median">${fmtCurrency(r.median)}</td>
+        <td class="num gap ${r.downside == null ? 'none' : ''}">${r.downside == null ? '&mdash;' : fmtCurrency(r.downside)}</td>
+        <td class="num ${r.upside == null ? 'none' : ''}">${r.upside == null ? '&mdash;' : fmtCurrency(r.upside)}</td>
+      </tr>`).join('');
+
+    document.getElementById('detail-modal-overlay').classList.remove('hidden');
+  }
+
+  function closeDetailModal() {
+    document.getElementById('detail-modal-overlay').classList.add('hidden');
+  }
+
+  // Plain data, the same rows as the table, as a CSV file.
+  function exportDetailCsv() {
+    const rows = detailRows(state.projection);
+    const lines = ['Year,Age,Added this year,Median balance,Downside balance,Upside balance'];
+    rows.forEach(r => lines.push([
+      r.year, r.age, r.added == null ? '' : Math.round(r.added),
+      Math.round(r.median),
+      r.downside == null ? '' : Math.round(r.downside),
+      r.upside == null ? '' : Math.round(r.upside),
+    ].join(',')));
+    const url = URL.createObjectURL(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'waypoint-projection-detail.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Which assumptions the saved projection was built on ──────────────
+  // The projection is stamped with a basis key when it is computed. If the
+  // settings have changed since (or it predates the stamp), its numbers are
+  // out of date until it is recomputed.
+  function currentBasisKey() {
+    const cfg = state.config || {};
+    return window.HistoricalReturns.basisKey(cfg.projectionRates, cfg.inflationRate);
+  }
+
+  // Also out of date when it was built before the market stats were recorded:
+  // the basis matches, but Detail has nothing to show until it is rebuilt.
+  function projectionIsStale() {
+    const p = state.projection;
+    if (!p) return false;
+    return p.basisKey !== currentBasisKey() || !(p.monteCarlo && p.monteCarlo.marketStats);
+  }
+
+  function renderStaleNote() {
+    document.getElementById('projection-stale-note').classList.toggle('hidden', !projectionIsStale());
+  }
+
+  async function recomputeProjectionNow() {
+    state.projection = await postJSON(API.projectionRecompute, {});
+    document.getElementById('cfg-recompute-notice').classList.add('hidden');
+    renderPresentation();
+    showToast('Projection updated');
   }
 
   function initials(household) {
@@ -231,7 +345,7 @@
     if (gap < -1) {
       return { label: 'Ahead', caption: `On pace for about age ${solved} — earlier than the ${target} you're aiming for.` };
     }
-    if (gap <= 2) {
+    if (gap <= 1) {
       return { label: 'On Track', caption: `On pace for about age ${solved}, close to the ${target} you're aiming for.` };
     }
     return {
@@ -388,7 +502,7 @@
           },
           ...spaghettiDatasets,
           {
-            label: 'Median (250 simulations)',
+            label: 'Median (1,000 simulations)',
             data: mc.median,
             borderColor: '#8FB6D9',
             backgroundColor: 'transparent',
@@ -1015,6 +1129,7 @@
       const idx = state.projection.yearsToRetirement;
       state.data.assessments.push({
         checkInId, date,
+        basisKey: state.projection.basisKey,
         destinationNumber: state.config.destinationNumber || 0,
         projectedBalance: state.projection.totalProjected,
         gap: state.projection.gap,
@@ -1347,15 +1462,32 @@
     });
   }
 
-  // ── Advanced panel — projection rates, inflation (collapsed by default) ─
+  // ── Advanced panel — market assumptions, inflation (collapsed by default) ─
+  // Percent fields are shown as whole-number percents and stored as decimals.
+  const toPercent = x => Math.round(x * 10000) / 100;
+
+  function syncMarketModeFields() {
+    const custom = document.getElementById('cfg-market-mode').value === 'custom';
+    document.getElementById('cfg-market-custom-fields').classList.toggle('hidden', !custom);
+  }
+
   function renderAdvancedPanel() {
     const cfg = state.config;
-    document.getElementById('cfg-inflation').value = cfg.inflationRate != null ? cfg.inflationRate : '';
+    document.getElementById('cfg-inflation').value = cfg.inflationRate != null ? toPercent(cfg.inflationRate) : '';
 
+    // Starting point for "my own assumptions": whatever they saved, else what
+    // the historical record gave for the default mix.
+    const history = window.HistoricalReturns.stats();
     const rates = cfg.projectionRates || {};
-    document.getElementById('cfg-rate-min').value = rates.min != null ? rates.min : '';
-    document.getElementById('cfg-rate-max').value = rates.max != null ? rates.max : '';
-    document.getElementById('cfg-rate-upside').value = rates.upside != null ? rates.upside : '';
+    document.getElementById('cfg-market-mode').value = rates.mode === 'custom' ? 'custom' : 'history';
+    document.getElementById('cfg-expected-return').value =
+      toPercent(rates.expectedReturn != null ? rates.expectedReturn : history.expectedReturn);
+    document.getElementById('cfg-volatility').value =
+      toPercent(rates.volatility != null ? rates.volatility : history.volatility);
+    document.getElementById('cfg-market-history-hint').textContent =
+      `US history ${history.firstYear} to ${history.lastYear}: ${toPercent(history.expectedReturn)}% average, ` +
+      `${toPercent(history.volatility)}% typical swing.`;
+    syncMarketModeFields();
   }
 
   function wireConfigurationTab() {
@@ -1379,6 +1511,20 @@
       body.classList.toggle('hidden', expanded);
     });
 
+    document.getElementById('cfg-market-mode').addEventListener('change', syncMarketModeFields);
+    document.getElementById('stale-update-btn').addEventListener('click', recomputeProjectionNow);
+    document.getElementById('detail-btn').addEventListener('click', openDetailModal);
+    document.getElementById('detail-close-btn').addEventListener('click', closeDetailModal);
+    document.getElementById('detail-export-btn').addEventListener('click', exportDetailCsv);
+    document.getElementById('detail-modal-overlay').addEventListener('click', e => {
+      if (e.target.id === 'detail-modal-overlay') closeDetailModal();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetailModal(); });
+    document.getElementById('recompute-now-btn').addEventListener('click', recomputeProjectionNow);
+    document.getElementById('recompute-later-btn').addEventListener('click', () => {
+      document.getElementById('cfg-recompute-notice').classList.add('hidden');
+    });
+
     document.getElementById('save-notes-btn').addEventListener('click', async () => {
       state.config.coachNotes = document.getElementById('cfg-coach-notes').value;
       await persistConfig();
@@ -1387,17 +1533,22 @@
 
     document.getElementById('save-config-btn').addEventListener('click', async () => {
       const cfg = state.config;
-      cfg.inflationRate = parseFloat(document.getElementById('cfg-inflation').value) || 0;
+      const keyBefore = currentBasisKey();
+      cfg.inflationRate = (parseFloat(document.getElementById('cfg-inflation').value) || 0) / 100;
       cfg.projectionRates = {
-        min: parseFloat(document.getElementById('cfg-rate-min').value) || 0,
-        max: parseFloat(document.getElementById('cfg-rate-max').value) || 0,
-        upside: parseFloat(document.getElementById('cfg-rate-upside').value) || 0,
+        mode: document.getElementById('cfg-market-mode').value,
+        expectedReturn: (parseFloat(document.getElementById('cfg-expected-return').value) || 0) / 100,
+        volatility: Math.max(0, parseFloat(document.getElementById('cfg-volatility').value) || 0) / 100,
       };
       cfg.coachTone = 'centered';
 
       await persistConfig();
       renderPresentation();
       showToast('Configuration saved');
+      // New assumptions: let the user choose whether to rebuild the projection
+      // now or leave it as is until the next check-in (the stale note on the
+      // dashboard stays up until it is rebuilt).
+      document.getElementById('cfg-recompute-notice').classList.toggle('hidden', currentBasisKey() === keyBefore);
     });
   }
 
@@ -1425,7 +1576,13 @@
       const res = await fetch('/waypoint-app/api/coach-analyses');
       if (!res.ok) return;
       const analyses = await res.json();
-      state.latestAnalysis = analyses && analyses.length ? analyses[analyses.length - 1] : null;
+      // Only an analysis written on the same assumptions as the projection on
+      // screen belongs next to it. Older ones (including any from before
+      // assumptions were recorded) stay saved but are not shown as current.
+      const key = state.projection && state.projection.basisKey;
+      const matching = (analyses || []).filter(a => a.basisKey && a.basisKey === key);
+      state.latestAnalysis = matching.length ? matching[matching.length - 1] : null;
+      state.hasEarlierAnalyses = !state.latestAnalysis && !!(analyses && analyses.length);
     } catch (e) {
       // coach analyses optional — app works without them
     }
@@ -1433,6 +1590,19 @@
 
   function renderCoachPanel(projection, config) {
     const analysis = state.latestAnalysis;
+
+    // Analyses exist but none match today's assumptions: say so instead of
+    // showing a read written on different numbers.
+    if (!analysis && state.hasEarlierAnalyses) {
+      document.getElementById('coach-name-heading').textContent =
+        'Your assumptions changed. Run the coach for an updated read.';
+      const body = document.querySelector('.coach-body');
+      if (body) body.style.display = 'none';
+      document.querySelectorAll('.coach-col-recs .coach-rec').forEach(r => r.remove());
+      const link = document.querySelector('.coach-scenarios-link');
+      if (link) { link.style.pointerEvents = 'none'; link.style.opacity = '0.5'; link.onclick = e => e.preventDefault(); }
+      return;
+    }
 
     // Render verdict/heading
     if (analysis && analysis.verdict) {

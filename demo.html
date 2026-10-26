@@ -1358,6 +1358,53 @@ table.data-table {
   .type-legend-examples::before { content: "Examples: "; }
 }
 
+/* Shown only when the saved projection was built on assumptions that have
+   since changed. */
+.stale-note {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 10px; padding: 8px 12px;
+  border: 1px solid var(--coach-amber); border-radius: 8px;
+  font-size: 12.5px; color: var(--coach-amber);
+}
+.recompute-notice { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--slate-surface); }
+.recompute-notice p { margin: 0 0 8px; font-size: 13px; }
+
+/* Detail modal: the year-by-year proof behind the projection. */
+.modal-card.detail-card { max-width: 1020px; max-height: 90vh; overflow-y: auto; padding: 32px; }
+.detail-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+.detail-title { font-family: var(--font-heading); font-size: 22px; font-weight: 500; color: var(--soft-white); line-height: 1.2; }
+.detail-close { background: none; border: 0; color: var(--muted-text); font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.detail-close:hover { color: var(--soft-white); }
+.detail-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.detail-stat { background: var(--slate-surface-2); border-radius: var(--radius-sm); padding: 14px 14px 12px; }
+.detail-stat-label { font-size: 11.5px; color: var(--label-blue); }
+.detail-stat-value { font-family: var(--font-heading); font-size: 28px; font-weight: 500; color: var(--soft-white); margin: 6px 0 2px; }
+.detail-stat-note { font-size: 12px; line-height: 1.45; color: var(--faint-text); }
+.detail-tagline {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--light-blue);
+  background: rgba(119, 163, 207, 0.10);
+  border-left: 3px solid var(--label-blue);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 12px 16px;
+  margin: 18px 14px 24px;
+}
+.detail-table-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 0 14px; }
+.detail-table-title { font-size: 13px; font-weight: 500; color: var(--light-blue); }
+.detail-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.detail-table th { text-align: left; font-weight: 400; font-size: 11.5px; color: var(--label-blue); padding: 10px 14px; border-bottom: 1px solid var(--slate-border); }
+.detail-table td { padding: 10px 14px; color: var(--muted-text); border-bottom: 1px solid rgba(107, 124, 140, 0.18); }
+.detail-table .num { text-align: right; }
+.detail-table th.median { color: var(--brand-wordmark-blue); }
+.detail-table td.median { color: var(--soft-white); font-weight: 500; }
+.detail-table .gap { padding-left: 32px; }
+.detail-table td.none { color: var(--faint-text); }
+@media (max-width: 640px) { .detail-cards { grid-template-columns: 1fr; } }
+
+/* The projection chart's legend sits below the graph. */
+.legend-below { flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+
 .demo-hero-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
 .demo-badge{display:inline-block;padding:3px 10px;border-radius:999px;background:#B8783D;color:#fff;font:600 10.5px/1.4 Inter,sans-serif;letter-spacing:.08em;vertical-align:middle}
 .demo-reset{padding:0;background:none;border:0;color:var(--coach-amber);opacity:.85;font:500 11px Inter,sans-serif;letter-spacing:.02em;text-decoration:underline;cursor:pointer}
@@ -1457,15 +1504,20 @@ table.data-table {
       <div class="card panel">
         <div class="panel-head">
           <div class="panel-title">Retirement Projection</div>
-          <div class="legend-inline">
-            <span><span class="dot solid"></span>Median (250 simulations)</span>
-            <span><span class="swatch-band"></span>Middle 60% of outcomes</span>
-            <span><span class="dot dashed"></span>Target</span>
-          </div>
+          <button class="btn-secondary hidden" id="detail-btn" type="button">Detail</button>
+        </div>
+        <div class="stale-note hidden" id="projection-stale-note">
+          <span>This projection is out of date.</span>
+          <button class="btn-secondary" id="stale-update-btn" type="button">Update now</button>
         </div>
         <div class="chart-wrap" id="chart-wrap">
           <canvas id="projection-chart"></canvas>
           <div class="chart-callout hidden" id="chart-callout"></div>
+        </div>
+        <div class="legend-inline legend-below">
+          <span><span class="dot solid"></span>Median (1,000 simulations)</span>
+          <span><span class="swatch-band"></span>Middle 60% of outcomes</span>
+          <span><span class="dot dashed"></span>Target</span>
         </div>
       </div>
 
@@ -1721,26 +1773,32 @@ table.data-table {
 
           <div class="advanced-section">
             <div class="advanced-section-title-row">
-              <div class="advanced-section-title">Projection Rates</div>
-              <span class="th-help" tabindex="0" aria-label="What do these rates mean?"><span class="th-tip th-tip-wide">
-                <strong>Minimum annual rate</strong> — the low end of the random walk used for market vehicles (401(k), IRA, brokerage, etc.) each simulated year. A worse-than-usual year in your plan won't go below this.<br/>
-                <strong>Maximum annual rate</strong> — the high end of that same random walk. A better-than-usual year won't go above this. Each simulated year draws a rate somewhere between Min and Max — not one fixed rate for the whole projection.<br/>
-                <strong>Upside rate</strong> — a separate, single flat rate (no year-to-year randomness) used only for the "if performance runs ahead of plan" reference line — not part of the Min/Max random walk. Nothing forces it above Max; for it to genuinely read as "upside," it should be set higher than Max, but the app won't stop you from setting it lower.
+              <div class="advanced-section-title">Market assumptions</div>
+              <span class="th-help" tabindex="0" aria-label="What do these assumptions mean?"><span class="th-tip th-tip-wide">
+                <strong>Historical US markets</strong> — the default. Each simulated future replays real US years (1928 to 2025, a 60/40 mix of stocks and bonds) in 5-year stretches, so good and bad decades show up the way they actually did.<br/>
+                <strong>My own assumptions</strong> — you set the average yearly return and how much a typical year swings from that average. A larger swing means a wider spread of outcomes. Only market accounts (401(k), IRA, brokerage) use these.
               </span></span>
             </div>
-            <p class="util-panel-desc">Single random-path projection between Min and Max, drawn per vehicle per year (not multi-trial Monte Carlo). Upside is shown as a secondary "ahead of plan" line.</p>
+            <p class="util-panel-desc">How the market accounts are simulated. Every projection runs 1,000 possible futures and shows the middle outcome with a band around it.</p>
             <div class="form-grid">
               <div class="form-field">
-                <label>Minimum annual rate</label>
-                <input type="number" step="0.001" id="cfg-rate-min" />
+                <label>Simulate market returns using</label>
+                <select id="cfg-market-mode">
+                  <option value="history">Historical US markets</option>
+                  <option value="custom">My own assumptions</option>
+                </select>
+                <div class="form-hint" id="cfg-market-history-hint"></div>
+              </div>
+            </div>
+            <div class="form-grid hidden" id="cfg-market-custom-fields">
+              <div class="form-field">
+                <label>Expected yearly return (%)</label>
+                <input type="number" step="0.1" id="cfg-expected-return" />
               </div>
               <div class="form-field">
-                <label>Maximum annual rate</label>
-                <input type="number" step="0.001" id="cfg-rate-max" />
-              </div>
-              <div class="form-field">
-                <label>Upside rate</label>
-                <input type="number" step="0.001" id="cfg-rate-upside" />
+                <label>Yearly ups and downs (%)</label>
+                <input type="number" step="0.1" min="0" id="cfg-volatility" />
+                <div class="form-hint">How far a typical year lands from the average.</div>
               </div>
             </div>
           </div>
@@ -1749,8 +1807,8 @@ table.data-table {
             <div class="advanced-section-title">Inflation</div>
             <div class="form-grid">
               <div class="form-field">
-                <label>Assumed inflation rate</label>
-                <input type="number" step="0.001" id="cfg-inflation" />
+                <label>Assumed inflation rate (%)</label>
+                <input type="number" step="0.1" id="cfg-inflation" />
                 <div class="form-hint">Used to show today's-dollars equivalent alongside the nominal figure.</div>
               </div>
             </div>
@@ -1759,12 +1817,49 @@ table.data-table {
           <div class="actions-row">
             <button class="btn-primary" id="save-config-btn">Save configuration</button>
           </div>
+          <div class="recompute-notice hidden" id="cfg-recompute-notice">
+            <p>Your assumptions changed. Update the projection now, or wait until your next check-in?</p>
+            <div class="actions-row">
+              <button class="btn-primary" id="recompute-now-btn" type="button">Update now</button>
+              <button class="btn-secondary" id="recompute-later-btn" type="button">Wait for check-in</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
   </div>
 </main>
+
+<!-- Detail modal: where the projected number comes from, year by year. -->
+<div class="modal-overlay hidden" id="detail-modal-overlay">
+  <div class="modal-card detail-card" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <div class="detail-head">
+      <div>
+        <div class="detail-title" id="detail-title">Detail</div>
+      </div>
+      <button class="detail-close" id="detail-close-btn" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="detail-cards">
+      <div class="detail-stat"><div class="detail-stat-label">Annual Avg Market Rate</div><div class="detail-stat-value" id="detail-avg"></div><div class="detail-stat-note">Average yearly market return across all 1,000 simulations.</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Annual Compound Median Rate</div><div class="detail-stat-value" id="detail-compound"></div><div class="detail-stat-note">Yearly market return realized by the median simulation.</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Annual Volatility Cost</div><div class="detail-stat-value" id="detail-cost"></div><div class="detail-stat-note">The discount market volatility puts on the median, since down years do happen.</div></div>
+    </div>
+    <div class="detail-tagline" id="detail-tagline"></div>
+    <div class="detail-table-head">
+      <div class="detail-table-title">Detail By Year</div>
+      <button class="btn-primary" id="detail-export-btn" type="button">Export CSV</button>
+    </div>
+    <div class="detail-table-wrap">
+      <table class="detail-table">
+        <thead><tr>
+          <th>Year</th><th>Age</th><th class="num">Added this year</th><th class="num median">Median balance</th><th class="num gap">Downside balance</th><th class="num">Upside balance</th>
+        </tr></thead>
+        <tbody id="detail-rows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
 <!-- Single-question edit modal — opened by clicking a highlighted word in
      the plan paragraph. -->
@@ -1784,6 +1879,7 @@ table.data-table {
 <div class="save-toast" id="save-toast">Saved</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/historical-returns.js"></script>
 <script>
 (function () {
   'use strict';
@@ -1792,7 +1888,7 @@ table.data-table {
   // so every call the app makes to its own API is answered from the fixtures
   // below, with edits kept in this browser's localStorage.
   const STORE_KEY = 'waypoint_demo_v1';
-  const SEED = {"config":{"household":[{"name":"John","dateOfBirth":"1984-01-01"}],"destinationNumber":1650000,"destinationNumberHelper":{"desiredAnnualIncome":90000,"socialSecurityEstimate":24000,"useHelper":false},"targetRetirementAge":65,"projectionRates":{"min":0.04,"max":0.1,"upside":0.08},"inflationRate":0.025,"coachTone":"centered","coachNotes":"*Primary note/strategy from my advisor\nA 4% withdrawal rule is a reasonable starting point. If you have $1.65M and draw 4% ($66k) alongside Social Security, that covers the $90k target. Plan for the conservative case and be pleasantly surprised if markets cooperate.\n\n*Vehicle Notes\nTerm Life - pure protection while the kids are young, no cash value\nWhole Life - cash value builds tax-deferred, can borrow against it if needed\nJohnny's College Fund - savings earmarked for Johnny's tuition, college starts in about 10 years, not part of the retirement plan in spirit\n401k - the main growth engine\n\n*To Dos\nContribute to the 401k at least up to the full employer match first\nThen keep funding the Whole Life cash value","userConcerns":"I feel slightly behind on saving for my own retirement, but I know I have a pretty solid plan for Johnny in his college fund. He starts college in about 10 years. I am starting to wonder whether I should put even more into the college fund, or whether I should be increasing my 401k contributions instead, or some blend of the two. My spouse also wants to keep our checking and savings liquid in case something happens."},"data":{"vehicles":[{"id":"veh_jd_chk","company":"Chase Bank","vehicle":"Checking","category":"Checking/Savings","benefit":5678.32,"retirementCashValue":5678.32,"contribution":0,"period":"","type":"checking"},{"id":"veh_jd_sav","company":"Chase Bank","vehicle":"Savings","category":"Checking/Savings","benefit":10412.95,"retirementCashValue":10412.95,"contribution":750,"period":"Monthly","type":"savings"},{"id":"veh_jd_term","company":"Guardian","vehicle":"Term Life","category":"Insurance","benefit":1000000,"retirementCashValue":0,"contribution":900,"period":"Annually","type":"term_life"},{"id":"veh_jd_whole","company":"Guardian","vehicle":"Whole Life","category":"Insurance","benefit":500000,"retirementCashValue":43000,"contribution":500,"period":"Monthly","type":"cash_value_life"},{"id":"veh_jd_401k","company":"Fidelity","vehicle":"401k","category":"Investment","benefit":126472,"retirementCashValue":126472,"contribution":500,"period":"Monthly","type":"investment"},{"id":"veh_jd_529","company":"Fidelity","vehicle":"Johnny's College Fund","category":"Checking/Savings","benefit":35000,"retirementCashValue":35000,"contribution":250,"period":"Monthly","type":"savings"}],"snapshots":[],"assessments":[],"currentProjection":null},"analyses":[{"verdict":"You're not behind so much as early: at today's pace you reach your $1.65M goal around age 68, three years past your age-65 target, with a projected $1.42M at retirement. That's a sequencing question, not a shortfall emergency.","recommendations":[{"title":"Let the 401k carry the extra weight, not the college fund","description":"Once you've captured the full employer match, consider directing any additional savings capacity toward your Fidelity 401k rather than adding extra to Johnny's college fund.","reasoning":"Your 401k has 23 years left to compound at market rates (4-10% in this plan) and is what's doing most of the work toward your $1.65M goal, projected to grow from $126,472 to $910,689. Johnny's college fund, by contrast, is modeled as a savings-style account with contribution-only growth and only a 10-year runway until he starts school, so extra dollars there have far less time and growth potential working for them. Based on its current contribution pace, that fund is on track to reach roughly $65,000 by the time Johnny enrolls (an estimate, not the plan's age-65 projection figure)."},{"title":"Keep the buffer, redirect the surplus","description":"Your Chase savings account is already projected to build a substantial buffer, climbing from $10,413 to $217,413, so once it comfortably covers 3-6 months of household expenses, consider gradually steering new savings contributions toward the 401k instead.","reasoning":"This respects your spouse's priority of keeping checking and savings liquid (nothing here suggests draining either account) while still putting fresh dollars to work closing the $231,220 gap between your projected and target balances at 65. It's a gradual shift of future contributions, not a reallocation of what's already sitting in the account."}],"fullReport":"## Your Situation\n\nAt 42, you're projected to reach your $1.65M retirement goal by around age 68, three years after your target of 65. At 65 specifically, the plan shows $1,418,780 in the middle outcome (from running simulations), with a downside case of $1,252,523 if markets underperform. That leaves a gap of about $231,220 between the projected middle outcome and your goal at your target age. This isn't a crisis. It's a timing gap that's very workable over the next 23 years, especially since your 401k, the main growth engine in your plan, still has two decades of compounding ahead of it.\n\nYour advisor's sequencing (401k match first, then Whole Life cash value) remains sound. The question you're wrestling with, college fund versus 401k, sits on top of that sequencing rather than replacing it.\n\n## Addressing the College Fund vs. 401k Question\n\nHere's the core tradeoff: your 401k is invested and modeled to grow at market rates (4% to 10% annually) for the next 23 years, which is why it's projected to roughly 7x from $126,472 to $910,689. Johnny's college fund, because it's held as a savings-style account in this plan, is modeled with contribution-only growth and no market return, and it only has about 10 years until he starts school. Based on its current contribution pace, it's on track to hold roughly $65,000 around that time (this is an estimate built from the starting balance plus contributions, not the plan's official age-65 projection number, which reflects a much longer horizon).\n\nThat combination, shorter time horizon and no assumed market growth in this model, means a dollar added to the college fund today does less work than a dollar added to the 401k. If you want to put extra toward Johnny, that's a values call and a reasonable one. But purely from a \"close the retirement gap\" lens, directing incremental dollars to the 401k, once your employer match is fully captured, does more to move your solved age back toward 65. Worth noting: if the college fund is actually invested in the market (some college savings vehicles are), its real growth could outpace what this conservative model shows. Worth checking with whoever manages that account.\n\n## Addressing the Liquidity Concern\n\nYour spouse's instinct to keep checking and savings liquid is a good one, and nothing in this plan requires touching either account's current balance. In fact, your Chase savings account is already on a strong trajectory, projected to grow from $10,413 to $217,413, which suggests you're already building a healthy buffer through regular contributions. The move here isn't \"use what's saved,\" it's \"once that buffer comfortably covers 3-6 months of expenses, consider sending future contributions to the 401k instead of continuing to stack savings past that point.\" That's a gradual shift in where new dollars go, not a reallocation of existing balances, and it should be an easier conversation to have with your spouse since the safety net stays fully intact.\n\n## Next Steps\n\nTwo things worth focusing on: confirm you're capturing the full 401k match (if you're not already), then look at whether you have room to push 401k contributions a bit further, especially using any new savings capacity rather than redirecting money earmarked for Johnny. Second, keep an eye on your savings buffer, once it's comfortably covering several months of expenses, that's the signal to start nudging new contributions toward the 401k rather than letting the buffer keep growing indefinitely. Both moves work with your current plan rather than against it, and both are reversible if your situation changes.","generatedAt":"2026-10-02T21:58:25.675Z"}]};
+  const SEED = {"config":{"household":[{"name":"John","dateOfBirth":"1984-01-01"}],"destinationNumber":1900000,"destinationNumberHelper":{"desiredAnnualIncome":100000,"socialSecurityEstimate":24000,"useHelper":false},"targetRetirementAge":65,"projectionRates":{"mode":"history"},"inflationRate":0.031,"coachTone":"centered","coachNotes":"*Primary note/strategy from my advisor\nA 4% withdrawal rule is a reasonable starting point. If you have $1.9M and draw 4% ($76k) alongside Social Security, that covers the $100k target. Plan for the conservative case and be pleasantly surprised if markets cooperate.\n\n*Vehicle Notes\nTerm Life - pure protection while the kids are young, no cash value\nWhole Life - cash value builds tax-deferred, can borrow against it if needed\nJohnny's College Fund - savings earmarked for Johnny's tuition, college starts in about 10 years, not part of the retirement plan in spirit\n401k - the main growth engine\n\n*To Dos\nContribute to the 401k at least up to the full employer match first\nThen keep funding the Whole Life cash value","userConcerns":"I feel slightly behind on saving for my own retirement, but I know I have a pretty solid plan for Johnny in his college fund. He starts college in about 10 years. I am starting to wonder whether I should put even more into the college fund, or whether I should be increasing my 401k contributions instead, or some blend of the two. My spouse also wants to keep our checking and savings liquid in case something happens."},"data":{"vehicles":[{"id":"veh_jd_chk","company":"Chase Bank","vehicle":"Checking","category":"Checking/Savings","benefit":5678.32,"retirementCashValue":5678.32,"contribution":0,"period":"","type":"checking"},{"id":"veh_jd_sav","company":"Chase Bank","vehicle":"Savings","category":"Checking/Savings","benefit":10412.95,"retirementCashValue":10412.95,"contribution":750,"period":"Monthly","type":"savings"},{"id":"veh_jd_term","company":"Guardian","vehicle":"Term Life","category":"Insurance","benefit":1000000,"retirementCashValue":0,"contribution":900,"period":"Annually","type":"term_life"},{"id":"veh_jd_whole","company":"Guardian","vehicle":"Whole Life","category":"Insurance","benefit":500000,"retirementCashValue":43000,"contribution":500,"period":"Monthly","type":"cash_value_life"},{"id":"veh_jd_401k","company":"Fidelity","vehicle":"401k","category":"Investment","benefit":126472,"retirementCashValue":126472,"contribution":500,"period":"Monthly","type":"investment"},{"id":"veh_jd_529","company":"Fidelity","vehicle":"Johnny's College Fund","category":"Checking/Savings","benefit":35000,"retirementCashValue":35000,"contribution":250,"period":"Monthly","type":"savings"}],"snapshots":[],"assessments":[],"currentProjection":null},"analyses":[{"verdict":"You're not behind so much as early: at today's pace you reach your $1.9M goal around age 67, two years past your age-65 target, with a projected $1.72M in the middle outcome at retirement. That's a sequencing question, not a shortfall emergency.","recommendations":[{"title":"Let the 401k carry the extra weight, not the college fund","description":"Once you've captured the full employer match, consider directing any additional savings capacity toward your Fidelity 401k rather than adding extra to Johnny's college fund.","reasoning":"Your 401k has 23 years left to compound in the market and is what's doing most of the work toward your $1.9M goal, projected to grow from $126,472 to $1,211,094. Johnny's college fund, by contrast, is modeled as a savings-style account with contribution-only growth and only a 10-year runway until he starts school, so extra dollars there have far less time and growth potential working for them. Based on its current contribution pace, that fund is on track to reach roughly $65,000 by the time Johnny enrolls (an estimate, not the plan's age-65 projection figure)."},{"title":"Keep the buffer, redirect the surplus","description":"Your Chase savings account is already projected to build a substantial buffer, climbing from $10,413 to $217,413, so once it comfortably covers 3-6 months of household expenses, consider gradually steering new savings contributions toward the 401k instead.","reasoning":"This respects your spouse's priority of keeping checking and savings liquid (nothing here suggests draining either account) while still putting fresh dollars to work closing the $180,815 gap between your projected and target balances at 65. It's a gradual shift of future contributions, not a reallocation of what's already sitting in the account."}],"fullReport":"## Your Situation\n\nAt 42, you're projected to reach your $1.9M retirement goal by around age 67, two years after your target of 65. At 65 specifically, the plan shows $1,719,185 in the middle outcome (from running 1,000 simulations of real US market history), with a downside case of $1,358,758 if markets underperform. That leaves a gap of about $180,815 between the projected middle outcome and your goal at your target age. This isn't a crisis. It's a timing gap that's very workable over the next 23 years, especially since your 401k, the main growth engine in your plan, still has two decades of compounding ahead of it.\n\nYour advisor's sequencing (401k match first, then Whole Life cash value) remains sound. The question you're wrestling with, college fund versus 401k, sits on top of that sequencing rather than replacing it.\n\n## Addressing the College Fund vs. 401k Question\n\nHere's the core tradeoff: your 401k is invested and simulated on real US market history for the next 23 years, which is why it's projected to grow nearly 10x from $126,472 to $1,211,094. Johnny's college fund, because it's held as a savings-style account in this plan, is modeled with contribution-only growth and no market return, and it only has about 10 years until he starts school. Based on its current contribution pace, it's on track to hold roughly $65,000 around that time (this is an estimate built from the starting balance plus contributions, not the plan's official age-65 projection number, which reflects a much longer horizon).\n\nThat combination, shorter time horizon and no assumed market growth in this model, means a dollar added to the college fund today does less work than a dollar added to the 401k. If you want to put extra toward Johnny, that's a values call and a reasonable one. But purely from a \"close the retirement gap\" lens, directing incremental dollars to the 401k, once your employer match is fully captured, does more to move your solved age back toward 65. Worth noting: if the college fund is actually invested in the market (some college savings vehicles are), its real growth could outpace what this conservative model shows. Worth checking with whoever manages that account.\n\n## Addressing the Liquidity Concern\n\nYour spouse's instinct to keep checking and savings liquid is a good one, and nothing in this plan requires touching either account's current balance. In fact, your Chase savings account is already on a strong trajectory, projected to grow from $10,413 to $217,413, which suggests you're already building a healthy buffer through regular contributions. The move here isn't \"use what's saved,\" it's \"once that buffer comfortably covers 3-6 months of expenses, consider sending future contributions to the 401k instead of continuing to stack savings past that point.\" That's a gradual shift in where new dollars go, not a reallocation of existing balances, and it should be an easier conversation to have with your spouse since the safety net stays fully intact.\n\n## Next Steps\n\nTwo things worth focusing on: confirm you're capturing the full 401k match (if you're not already), then look at whether you have room to push 401k contributions a bit further, especially using any new savings capacity rather than redirecting money earmarked for Johnny. Second, keep an eye on your savings buffer, once it's comfortably covering several months of expenses, that's the signal to start nudging new contributions toward the 401k rather than letting the buffer keep growing indefinitely. Both moves work with your current plan rather than against it, and both are reversible if your situation changes.","generatedAt":"2026-10-02T21:58:25.675Z","basisKey":"history:1928:0.6:5:310","basisMode":"history"}]};
   const DEMO_COACH_MESSAGE = "This is a demo. The coach runs a real, local Claude Code analysis in the full app, which needs the Waypoint app (index.html + server) running on your own machine. It does not run here. Grab the code from the repo to see this part work end to end.";
 
   // The types table (js/vehicle-types.js) decides how every vehicle is treated.
@@ -1814,7 +1910,7 @@ table.data-table {
 //                            and example product names people will recognize it
 //                            by (shown in the legend's Examples column)
 //   growth                   how the projection moves its balance:
-//                              'market'        compounds at the market-rate range
+//                              'market'        compounds at simulated market returns
 //                                              (simulated) plus contributions
 //                              'contributions' balance plus contributions only,
 //                                              no growth (linear)
@@ -1851,7 +1947,7 @@ table.data-table {
       moneyRole: 'building',
       needsCheckIn: true,
       help: 'Money invested in the market. It can grow, and it can dip.',
-      coachNote: 'Grown at the assumed market range from the profile, plus recurring contributions. This is the only kind of account modeled with market growth.',
+      coachNote: 'Grown with simulated market returns (the profile says how they were produced), plus recurring contributions. This is the only kind of account modeled with market growth.',
     },
     {
       id: 'cash_value_life',
@@ -1987,9 +2083,135 @@ table.data-table {
   window.VehicleTypes = VehicleTypes;
   const typesForCalculator = VehicleTypes; // calculator.js declares its own VehicleTypes, so hand it this alias
 
+  // The market history the simulation draws from (js/historical-returns.js).
+  const historyForCalculator = (function () {
+    const module = { exports: {} };
+    // US market history the Monte Carlo draws from, instead of a hand-picked
+// rate range. Each simulated year is a real year from this record.
+//
+// Source: Aswath Damodaran (NYU Stern), "Historical Returns on Stocks, Bonds
+// and Bills - United States", histretSP.xls, years 1928-2025. Inflation is the
+// CPI annual change (FRED CPIAUCNS) from the same file. Total returns,
+// nominal, rounded to 4 decimals.
+//
+//   STOCKS      S&P 500 including dividends
+//   BONDS       10-year US Treasury bond
+//   INFLATION   CPI, year over year
+//
+// Works in the browser (window.HistoricalReturns) and in Node (require).
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.HistoricalReturns = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  const FIRST_YEAR = 1928;
+
+  const STOCKS = [
+  0.4381, -0.0830, -0.2512, -0.4384, -0.0864, 0.4998, -0.0119, 0.4674, 0.3194, -0.3534,
+  0.2928, -0.0110, -0.1067, -0.1277, 0.1917, 0.2506, 0.1903, 0.3582, -0.0843, 0.0520,
+  0.0570, 0.1830, 0.3081, 0.2368, 0.1815, -0.0121, 0.5256, 0.3260, 0.0744, -0.1046,
+  0.4372, 0.1206, 0.0034, 0.2664, -0.0881, 0.2261, 0.1642, 0.1240, -0.0997, 0.2380,
+  0.1081, -0.0824, 0.0356, 0.1422, 0.1876, -0.1431, -0.2590, 0.3700, 0.2383, -0.0698,
+  0.0651, 0.1852, 0.3174, -0.0470, 0.2042, 0.2234, 0.0615, 0.3124, 0.1849, 0.0581,
+  0.1654, 0.3148, -0.0306, 0.3023, 0.0749, 0.0997, 0.0133, 0.3720, 0.2268, 0.3310,
+  0.2834, 0.2089, -0.0903, -0.1185, -0.2197, 0.2836, 0.1074, 0.0483, 0.1561, 0.0548,
+  -0.3655, 0.2594, 0.1482, 0.0210, 0.1589, 0.3215, 0.1352, 0.0138, 0.1177, 0.2161,
+  -0.0423, 0.3121, 0.1802, 0.2847, -0.1804, 0.2606, 0.2488, 0.1772,
+  ];
+
+  const BONDS = [
+  0.0084, 0.0420, 0.0454, -0.0256, 0.0879, 0.0186, 0.0796, 0.0447, 0.0502, 0.0138,
+  0.0421, 0.0441, 0.0540, -0.0202, 0.0229, 0.0249, 0.0258, 0.0380, 0.0313, 0.0092,
+  0.0195, 0.0466, 0.0043, -0.0030, 0.0227, 0.0414, 0.0329, -0.0134, -0.0226, 0.0680,
+  -0.0210, -0.0265, 0.1164, 0.0206, 0.0569, 0.0168, 0.0373, 0.0072, 0.0291, -0.0158,
+  0.0327, -0.0501, 0.1675, 0.0979, 0.0282, 0.0366, 0.0199, 0.0361, 0.1598, 0.0129,
+  -0.0078, 0.0067, -0.0299, 0.0820, 0.3281, 0.0320, 0.1373, 0.2571, 0.2428, -0.0496,
+  0.0822, 0.1769, 0.0624, 0.1500, 0.0936, 0.1421, -0.0804, 0.2348, 0.0143, 0.0994,
+  0.1492, -0.0825, 0.1666, 0.0557, 0.1512, 0.0038, 0.0449, 0.0287, 0.0196, 0.1021,
+  0.2010, -0.1112, 0.0846, 0.1604, 0.0297, -0.0910, 0.1075, 0.0128, 0.0069, 0.0280,
+  -0.0002, 0.0964, 0.1133, -0.0442, -0.1783, 0.0388, -0.0164, 0.0780,
+  ];
+
+  const INFLATION = [
+  -0.0116, 0.0058, -0.0640, -0.0932, -0.1027, 0.0076, 0.0152, 0.0299, 0.0145, 0.0286,
+  -0.0278, 0.0000, 0.0071, 0.0993, 0.0903, 0.0296, 0.0230, 0.0225, 0.1813, 0.0884,
+  0.0299, -0.0207, 0.0593, 0.0600, 0.0075, 0.0075, -0.0074, 0.0037, 0.0299, 0.0290,
+  0.0176, 0.0173, 0.0136, 0.0067, 0.0133, 0.0164, 0.0097, 0.0192, 0.0346, 0.0304,
+  0.0472, 0.0620, 0.0557, 0.0327, 0.0341, 0.0871, 0.1234, 0.0694, 0.0486, 0.0670,
+  0.0902, 0.1329, 0.1252, 0.0892, 0.0383, 0.0379, 0.0395, 0.0380, 0.0110, 0.0443,
+  0.0442, 0.0465, 0.0611, 0.0306, 0.0290, 0.0275, 0.0267, 0.0254, 0.0332, 0.0170,
+  0.0161, 0.0268, 0.0339, 0.0155, 0.0238, 0.0188, 0.0326, 0.0342, 0.0254, 0.0408,
+  0.0009, 0.0272, 0.0150, 0.0296, 0.0174, 0.0150, 0.0076, 0.0073, 0.0207, 0.0211,
+  0.0191, 0.0229, 0.0136, 0.0704, 0.0645, 0.0335, 0.0289, 0.0274,
+  ];
+
+  // A 60/40 stock/bond mix, rebalanced every year. The default for market
+  // vehicles until accounts carry their own mix.
+  const STOCK_WEIGHT = 0.6;
+  const BLENDED = STOCKS.map((s, i) => STOCK_WEIGHT * s + (1 - STOCK_WEIGHT) * BONDS[i]);
+
+  // Average yearly inflation over the same years the returns come from, so
+  // the "today's dollars" conversion matches the era being simulated.
+  const MEAN_INFLATION = INFLATION.reduce((a, b) => a + b, 0) / INFLATION.length;
+
+  // Years of history drawn together in one simulated stretch. Long enough to
+  // keep a downturn or a hot streak intact, short enough to mix many eras.
+  const BLOCK_YEARS = 5;
+
+  // Inflation used for the today's-dollars conversion when none is set: the
+  // average over the same years the returns come from (3.1%).
+  const DEFAULT_INFLATION = 0.031;
+
+  // True when the user has chosen their own return and swing.
+  function isCustomMode(rates) {
+    return !!rates && rates.mode === 'custom' &&
+      Number.isFinite(rates.expectedReturn) && Number.isFinite(rates.volatility);
+  }
+
+  // What the projection's numbers were built on, as one comparable string.
+  // Two projections or coach analyses are about the same footing only when
+  // their keys match. History is keyed by its method (start year, mix, block
+  // length), not its end year, so adding a new year of data doesn't reset
+  // anything. Custom is keyed by the exact numbers. Inflation is in both
+  // because it changes every today's-dollars figure.
+  function basisKey(rates, inflationRate) {
+    const bp = x => Math.round(x * 10000);
+    const infl = bp(Number.isFinite(inflationRate) ? inflationRate : DEFAULT_INFLATION);
+    if (isCustomMode(rates)) {
+      return `custom:${bp(rates.expectedReturn)}:${bp(rates.volatility)}:${infl}`;
+    }
+    return `history:${FIRST_YEAR}:${STOCK_WEIGHT}:${BLOCK_YEARS}:${infl}`;
+  }
+
+  // Plain-number summary of the blended series: its average yearly return,
+  // how much a typical year swings from that average (standard deviation),
+  // and the extremes. Shown as the starting point for "my own assumptions".
+  function stats() {
+    const n = BLENDED.length;
+    const mean = BLENDED.reduce((a, b) => a + b, 0) / n;
+    const variance = BLENDED.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (n - 1);
+    return {
+      firstYear: FIRST_YEAR,
+      lastYear: FIRST_YEAR + n - 1,
+      expectedReturn: mean,
+      volatility: Math.sqrt(variance),
+      worstYear: Math.min(...BLENDED),
+      bestYear: Math.max(...BLENDED),
+    };
+  }
+
+  return { FIRST_YEAR, STOCK_WEIGHT, BLOCK_YEARS, DEFAULT_INFLATION, isCustomMode, basisKey, STOCKS, BONDS, INFLATION, BLENDED, MEAN_INFLATION, stats };
+});
+
+    return module.exports;
+  })();
+  window.HistoricalReturns = historyForCalculator; // the Advanced panel shows its summary numbers
+
   const calculator = (function () {
     const module = { exports: {} };
-    const require = () => typesForCalculator; // calculator.js's only require is the types table
+    // calculator.js requires the types table and the market history
+    const require = name => (name.includes('historical-returns') ? historyForCalculator : typesForCalculator);
     // Pure projection engine — no DOM, no I/O. Ported and corrected from the
 // Vertex42-based sheet per the Technical & Data Brief.
 //
@@ -2001,6 +2223,8 @@ table.data-table {
 // How each vehicle is treated comes from the types table (js/vehicle-types.js),
 // not from category names scattered through this file.
 const VehicleTypes = require('./vehicle-types');
+// Real US market years the simulation draws from (js/historical-returns.js).
+const HistoricalReturns = require('./historical-returns');
 
 // Not part of the projection: no balance, or a type that never counts (a
 // protection-only policy such as term life, whose premium is a cost, not savings).
@@ -2163,31 +2387,153 @@ function toTodaysDollars(nominal, years, inflationRate) {
 // year by year once (not re-deriving from year 0 each time — O(trials x
 // years x vehicles), not O(trials x years^2 x vehicles)).
 //
-// Trials are seeded on (vehicleId, trial, year) — deterministic, not
-// Math.random() — so the same underlying vehicle data always reproduces
-// the exact same 250 trials and the exact same percentile bands. This is
-// what makes the persisted-projection model work: recomputing later with
-// unchanged data yields bit-identical results, so "stale until the next
-// check-in" is a meaningful, honest state rather than an arbitrary one.
+// Where the yearly returns come from: by default each trial replays real US
+// market history (1928-2025, a 60/40 mix) in 5-year blocks picked at random,
+// so a trial can contain a 1930s crash or a 1970s stall, and good and bad
+// years cluster the way they do in life. Every market vehicle in a trial sees
+// the same market year. With rates.mode 'custom' the user supplies their own
+// expected return and yearly volatility instead, and each year is drawn from
+// a bell-shaped (log-normal) spread around that.
+//
+// Trials are seeded on the trial number — deterministic, not Math.random() —
+// so the same underlying vehicle data always reproduces the exact same trials
+// and the exact same percentile bands. This is what makes the
+// persisted-projection model work: recomputing later with unchanged data
+// yields bit-identical results, so "stale until the next check-in" is a
+// meaningful, honest state rather than an arbitrary one. A longer horizon
+// extends the same trials rather than reshuffling them.
 //
 // Interest-bearing vehicles (Investment category) carry real trial-to-trial
-// variance at the variable rates. Non-interest vehicles (Insurance,
-// Checking/Savings) are linear regardless of trial. Every vehicle goes
-// through its own type-appropriate rule each trial so totals stay consistent
-// with projectPortfolio's single-path logic.
-function runMonteCarlo(vehicles, horizonYears, rates, trialCount = 250, sampleCount = 25) {
+// variance. Non-interest vehicles (Insurance, Checking/Savings) are linear
+// regardless of trial. Every vehicle goes through its own type-appropriate
+// rule each trial so totals stay consistent with projectPortfolio's
+// single-path logic.
+
+// Years of history drawn together (see js/historical-returns.js).
+const BLOCK_YEARS = HistoricalReturns.BLOCK_YEARS;
+
+// How many simulated futures each projection runs. At this count the median
+// settles to within about 1% of what many more runs would give.
+const TRIAL_COUNT = 1000;
+
+// Small seeded random generator (mulberry32): same seed, same sequence.
+function seededRandom(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// One trial's yearly market returns: random 5-year blocks of history laid end
+// to end until `years` is covered.
+function historicalPath(trial, years) {
+  const series = HistoricalReturns.BLENDED;
+  const rand = seededRandom(Math.imul(trial + 1, 0x9E3779B1));
+  const path = [];
+  while (path.length < years) {
+    const start = Math.floor(rand() * (series.length - BLOCK_YEARS + 1));
+    for (let i = 0; i < BLOCK_YEARS && path.length < years; i++) {
+      path.push(series[start + i]);
+    }
+  }
+  return path;
+}
+
+function usesCustomRates(rates) {
+  return HistoricalReturns.isCustomMode(rates);
+}
+
+// One trial's yearly returns for a user's own assumptions. Each year is a
+// log-normal draw with the given average (expectedReturn) and typical swing
+// (volatility), so a year can be bad but never loses more than 100%.
+function customPath(trial, years, expectedReturn, volatility) {
+  const rand = seededRandom(Math.imul(trial + 1, 0x9E3779B1));
+  const growth = 1 + expectedReturn;
+  const sigma2 = Math.log(1 + (volatility * volatility) / (growth * growth));
+  const mu = Math.log(growth) - sigma2 / 2;
+  const sigma = Math.sqrt(sigma2);
+  const path = [];
+  for (let y = 0; y < years; y++) {
+    // Box-Muller: two uniform draws become one standard-normal draw.
+    const z = Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand());
+    path.push(Math.exp(mu + sigma * z) - 1);
+  }
+  return path;
+}
+
+// A single steady yearly rate for the per-vehicle breakdown, which only needs
+// the vehicles' relative shape (the totals are scaled to the simulated median).
+function steadyRate(rates) {
+  if (usesCustomRates(rates)) return rates.expectedReturn;
+  return HistoricalReturns.stats().expectedReturn;
+}
+
+// How the simulation was set up, for anything that has to explain it (the
+// coach). Returns plain facts, not prose.
+function describeBasis(rates) {
+  if (usesCustomRates(rates)) {
+    return {
+      mode: 'custom',
+      trials: TRIAL_COUNT,
+      expectedReturn: rates.expectedReturn,
+      volatility: rates.volatility,
+    };
+  }
+  const h = HistoricalReturns.stats();
+  return {
+    mode: 'history',
+    trials: TRIAL_COUNT,
+    firstYear: h.firstYear,
+    lastYear: h.lastYear,
+    blockYears: BLOCK_YEARS,
+    stockWeight: HistoricalReturns.STOCK_WEIGHT,
+    expectedReturn: h.expectedReturn,
+    volatility: h.volatility,
+    worstYear: h.worstYear,
+    bestYear: h.bestYear,
+  };
+}
+
+//
+// Alongside the balances it records what the market did in the first
+// `statsYears` years of every trial (the years up to retirement), so the
+// projection can show where its numbers come from: the average rate drawn,
+// the compounded rate of the middle future, and how often a year lost money.
+function runMonteCarlo(vehicles, horizonYears, rates, trialCount = TRIAL_COUNT, sampleCount = 25, statsYears = horizonYears) {
   const included = vehicles.filter(v => !isProtectionVehicle(v));
   const trials = []; // trials[t] = [balanceAtYear0, balanceAtYear1, ...]
 
+  const custom = usesCustomRates(rates);
+  const statYears = Math.min(Math.max(statsYears || horizonYears, 1), horizonYears);
+  let rateSum = 0, rateCount = 0, lossYears = 0, worst = Infinity, best = -Infinity;
+  const compounded = []; // each trial's compounded yearly market rate
+
   for (let t = 0; t < trialCount; t++) {
+    const marketPath = custom
+      ? customPath(t, horizonYears, rates.expectedReturn, rates.volatility)
+      : historicalPath(t, horizonYears);
+    let logGrowth = 0;
+    for (let y = 0; y < statYears; y++) {
+      const r = marketPath[y];
+      rateSum += r; rateCount++;
+      if (r < 0) lossYears++;
+      if (r < worst) worst = r;
+      if (r > best) best = r;
+      logGrowth += Math.log(1 + r);
+    }
+    compounded.push(Math.exp(logGrowth / statYears) - 1);
+
     const balances = included.map(v => v.retirementCashValue || 0);
     const yearly = [balances.reduce((s, b) => s + b, 0)];
 
     for (let y = 0; y < horizonYears; y++) {
       included.forEach((v, i) => {
         if (isInterestBearingVehicle(v)) {
-          const rate = seededRate(`${v.id}:${t}:${y}`, rates.min, rates.max);
-          balances[i] = balances[i] * (1 + rate) + annualContribution(v);
+          balances[i] = balances[i] * (1 + marketPath[y]) + annualContribution(v);
         } else if (isNonInterestVehicle(v)) {
           balances[i] += annualContribution(v);
         }
@@ -2211,6 +2557,14 @@ function runMonteCarlo(vehicles, horizonYears, rates, trialCount = 250, sampleCo
     median,
     p80,
     sampledPaths: trials.slice(0, sampleCount),
+    marketStats: {
+      years: statYears,
+      averageRate: rateSum / rateCount,
+      compoundMedianRate: percentile(compounded.sort((a, b) => a - b), 0.50),
+      lossShare: lossYears / rateCount,
+      worstYear: worst,
+      bestYear: best,
+    },
   };
 }
 
@@ -2233,6 +2587,11 @@ module.exports = {
   computeDestinationNumberHelper,
   toTodaysDollars,
   runMonteCarlo,
+  steadyRate,
+  describeBasis,
+  basisKey: HistoricalReturns.basisKey,
+  DEFAULT_INFLATION: HistoricalReturns.DEFAULT_INFLATION,
+  TRIAL_COUNT,
 };
 
     return module.exports;
@@ -2259,13 +2618,13 @@ function computeProjection(config, data) {
     ? Math.max(0, targetRetirementAge - currentAge)
     : 0;
 
-  const rates = config.projectionRates || { min: 0.04, max: 0.10, upside: 0.08 };
+  const rates = config.projectionRates || { mode: 'history' };
 
-  const inflationRate = config.inflationRate != null ? config.inflationRate : 0.025;
+  const inflationRate = config.inflationRate != null ? config.inflationRate : calculator.DEFAULT_INFLATION;
 
   // Run Monte Carlo for a wide horizon first to find the crossing using median (not old projectPortfolio)
   const initialHorizon = currentAge != null ? Math.min(100 - currentAge, 60) : 60;
-  const monteCarloForSolving = calculator.runMonteCarlo(data.vehicles, initialHorizon, rates, 250, 25);
+  const monteCarloForSolving = calculator.runMonteCarlo(data.vehicles, initialHorizon, rates, calculator.TRIAL_COUNT, 25, yearsToRetirement);
 
   // Find when median crosses the destination number
   let solvedYears = null;
@@ -2298,7 +2657,7 @@ function computeProjection(config, data) {
   const currentYear = new Date().getFullYear();
   // If we need more years than our initial horizon, run again with the full horizon
   const monteCarlo = horizonYears > initialHorizon
-    ? calculator.runMonteCarlo(data.vehicles, horizonYears, rates, 250, 25)
+    ? calculator.runMonteCarlo(data.vehicles, horizonYears, rates, calculator.TRIAL_COUNT, 25, yearsToRetirement)
     : monteCarloForSolving;
 
   const series = [];
@@ -2330,7 +2689,7 @@ function computeProjection(config, data) {
       let balance = startBalance;
       const contrib = v.contribution && (v.period === 'Monthly' ? v.contribution * 12 : v.period === 'Annually' ? v.contribution : 0) || 0;
       for (let y = 0; y < yearsToRetirement; y++) {
-        const rate = calculator.seededRate ? calculator.seededRate(`${v.id}:${y}`, rates.min, rates.max) : (rates.min + rates.max) / 2;
+        const rate = calculator.steadyRate(rates);
         balance = balance * (1 + rate) + contrib;
       }
       projectedBalance = balance;
@@ -2457,6 +2816,11 @@ function computeProjection(config, data) {
 
   return {
     computedAt: new Date().toISOString(),
+    // What these numbers were built on, so the coach and the UI can tell
+    // when a later change to the assumptions has made them out of date.
+    basisKey: calculator.basisKey(rates, inflationRate),
+    basis: calculator.describeBasis(rates),
+    inflationRate,
     currentAge,
     yearsToRetirement,
     targetRetirementAge,
@@ -2729,7 +3093,7 @@ function computeProjection(config, data) {
 
     const inflationRate = state.config && state.config.inflationRate != null
       ? state.config.inflationRate
-      : 0.025;
+      : window.HistoricalReturns.DEFAULT_INFLATION;
     const inflationFactor = Math.pow(1 + inflationRate, projection.yearsToRetirement);
     const medianTodaysDollars = medianAtTarget / inflationFactor;
     const incomeTodaysDollars = projectedAnnualIncome / inflationFactor;
@@ -2768,8 +3132,122 @@ function computeProjection(config, data) {
     document.getElementById('metric-withdrawal-range-caption').textContent = rangeCaption;
 
 
+    renderStaleNote();
+    // Detail needs the market stats recorded when the projection was built;
+    // a projection saved before that has none until it is updated.
+    document.getElementById('detail-btn').classList.toggle('hidden', !(mc && mc.marketStats));
+
     // Load and render coach analysis
     loadCoachAnalysis().then(() => renderCoachPanel(projection, config));
+  }
+
+  // ── Detail: where the projected number comes from, year by year ──────
+  // Everything shown is read from the saved projection (the median, downside
+  // and upside balance for each year, and the market stats recorded with it),
+  // so the last row is the same number as the headline.
+
+  function detailRows(projection) {
+    const mc = projection.monteCarlo;
+    const startYear = new Date(projection.computedAt).getFullYear();
+    const rows = [];
+    for (let y = 0; y <= projection.yearsToRetirement; y++) {
+      rows.push({
+        year: startYear + y,
+        age: projection.currentAge != null ? projection.currentAge + y : '',
+        added: y === 0 ? null : mc.median[y] - mc.median[y - 1],
+        median: mc.median[y],
+        // Today there is no band yet: all three are the current balance.
+        downside: y === 0 ? null : mc.p20[y],
+        upside: y === 0 ? null : mc.p80[y],
+      });
+    }
+    return rows;
+  }
+
+  function openDetailModal() {
+    const projection = state.projection;
+    const mc = projection && projection.monteCarlo;
+    if (!mc || !mc.marketStats) return;
+    const stats = mc.marketStats;
+    const rows = detailRows(projection);
+
+    // The cost is the difference of the two rounded figures shown beside it,
+    // so the three cards always tie out on screen.
+    const avg = Math.round(stats.averageRate * 1000) / 10;
+    const compound = Math.round(stats.compoundMedianRate * 1000) / 10;
+    document.getElementById('detail-avg').textContent = avg.toFixed(1) + '%';
+    document.getElementById('detail-compound').textContent = compound.toFixed(1) + '%';
+    document.getElementById('detail-cost').textContent = '-' + (Math.round((avg - compound) * 10) / 10).toFixed(1) + '%';
+
+    const oneIn = stats.lossShare > 0 ? Math.round(1 / stats.lossShare) : 0;
+    const pctWhole = n => (n < 0 ? '-' : '+') + Math.abs(Math.round(n * 100)) + '%';
+    document.getElementById('detail-tagline').textContent =
+      (oneIn ? `About 1 in ${oneIn} years lost money. ` : '') +
+      `Worst year ${pctWhole(stats.worstYear)}, best year ${pctWhole(stats.bestYear)}.`;
+
+    document.getElementById('detail-rows').innerHTML = rows.map(r => `
+      <tr>
+        <td>${r.year}</td>
+        <td>${r.age}</td>
+        <td class="num ${r.added == null ? 'none' : ''}">${r.added == null ? '&mdash;' : '+' + fmtCurrency(r.added)}</td>
+        <td class="num median">${fmtCurrency(r.median)}</td>
+        <td class="num gap ${r.downside == null ? 'none' : ''}">${r.downside == null ? '&mdash;' : fmtCurrency(r.downside)}</td>
+        <td class="num ${r.upside == null ? 'none' : ''}">${r.upside == null ? '&mdash;' : fmtCurrency(r.upside)}</td>
+      </tr>`).join('');
+
+    document.getElementById('detail-modal-overlay').classList.remove('hidden');
+  }
+
+  function closeDetailModal() {
+    document.getElementById('detail-modal-overlay').classList.add('hidden');
+  }
+
+  // Plain data, the same rows as the table, as a CSV file.
+  function exportDetailCsv() {
+    const rows = detailRows(state.projection);
+    const lines = ['Year,Age,Added this year,Median balance,Downside balance,Upside balance'];
+    rows.forEach(r => lines.push([
+      r.year, r.age, r.added == null ? '' : Math.round(r.added),
+      Math.round(r.median),
+      r.downside == null ? '' : Math.round(r.downside),
+      r.upside == null ? '' : Math.round(r.upside),
+    ].join(',')));
+    const url = URL.createObjectURL(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'waypoint-projection-detail.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Which assumptions the saved projection was built on ──────────────
+  // The projection is stamped with a basis key when it is computed. If the
+  // settings have changed since (or it predates the stamp), its numbers are
+  // out of date until it is recomputed.
+  function currentBasisKey() {
+    const cfg = state.config || {};
+    return window.HistoricalReturns.basisKey(cfg.projectionRates, cfg.inflationRate);
+  }
+
+  // Also out of date when it was built before the market stats were recorded:
+  // the basis matches, but Detail has nothing to show until it is rebuilt.
+  function projectionIsStale() {
+    const p = state.projection;
+    if (!p) return false;
+    return p.basisKey !== currentBasisKey() || !(p.monteCarlo && p.monteCarlo.marketStats);
+  }
+
+  function renderStaleNote() {
+    document.getElementById('projection-stale-note').classList.toggle('hidden', !projectionIsStale());
+  }
+
+  async function recomputeProjectionNow() {
+    state.projection = await postJSON(API.projectionRecompute, {});
+    document.getElementById('cfg-recompute-notice').classList.add('hidden');
+    renderPresentation();
+    showToast('Projection updated');
   }
 
   function initials(household) {
@@ -2802,7 +3280,7 @@ function computeProjection(config, data) {
     if (gap < -1) {
       return { label: 'Ahead', caption: `On pace for about age ${solved} — earlier than the ${target} you're aiming for.` };
     }
-    if (gap <= 2) {
+    if (gap <= 1) {
       return { label: 'On Track', caption: `On pace for about age ${solved}, close to the ${target} you're aiming for.` };
     }
     return {
@@ -2959,7 +3437,7 @@ function computeProjection(config, data) {
           },
           ...spaghettiDatasets,
           {
-            label: 'Median (250 simulations)',
+            label: 'Median (1,000 simulations)',
             data: mc.median,
             borderColor: '#8FB6D9',
             backgroundColor: 'transparent',
@@ -3586,6 +4064,7 @@ function computeProjection(config, data) {
       const idx = state.projection.yearsToRetirement;
       state.data.assessments.push({
         checkInId, date,
+        basisKey: state.projection.basisKey,
         destinationNumber: state.config.destinationNumber || 0,
         projectedBalance: state.projection.totalProjected,
         gap: state.projection.gap,
@@ -3918,15 +4397,32 @@ function computeProjection(config, data) {
     });
   }
 
-  // ── Advanced panel — projection rates, inflation (collapsed by default) ─
+  // ── Advanced panel — market assumptions, inflation (collapsed by default) ─
+  // Percent fields are shown as whole-number percents and stored as decimals.
+  const toPercent = x => Math.round(x * 10000) / 100;
+
+  function syncMarketModeFields() {
+    const custom = document.getElementById('cfg-market-mode').value === 'custom';
+    document.getElementById('cfg-market-custom-fields').classList.toggle('hidden', !custom);
+  }
+
   function renderAdvancedPanel() {
     const cfg = state.config;
-    document.getElementById('cfg-inflation').value = cfg.inflationRate != null ? cfg.inflationRate : '';
+    document.getElementById('cfg-inflation').value = cfg.inflationRate != null ? toPercent(cfg.inflationRate) : '';
 
+    // Starting point for "my own assumptions": whatever they saved, else what
+    // the historical record gave for the default mix.
+    const history = window.HistoricalReturns.stats();
     const rates = cfg.projectionRates || {};
-    document.getElementById('cfg-rate-min').value = rates.min != null ? rates.min : '';
-    document.getElementById('cfg-rate-max').value = rates.max != null ? rates.max : '';
-    document.getElementById('cfg-rate-upside').value = rates.upside != null ? rates.upside : '';
+    document.getElementById('cfg-market-mode').value = rates.mode === 'custom' ? 'custom' : 'history';
+    document.getElementById('cfg-expected-return').value =
+      toPercent(rates.expectedReturn != null ? rates.expectedReturn : history.expectedReturn);
+    document.getElementById('cfg-volatility').value =
+      toPercent(rates.volatility != null ? rates.volatility : history.volatility);
+    document.getElementById('cfg-market-history-hint').textContent =
+      `US history ${history.firstYear} to ${history.lastYear}: ${toPercent(history.expectedReturn)}% average, ` +
+      `${toPercent(history.volatility)}% typical swing.`;
+    syncMarketModeFields();
   }
 
   function wireConfigurationTab() {
@@ -3950,6 +4446,20 @@ function computeProjection(config, data) {
       body.classList.toggle('hidden', expanded);
     });
 
+    document.getElementById('cfg-market-mode').addEventListener('change', syncMarketModeFields);
+    document.getElementById('stale-update-btn').addEventListener('click', recomputeProjectionNow);
+    document.getElementById('detail-btn').addEventListener('click', openDetailModal);
+    document.getElementById('detail-close-btn').addEventListener('click', closeDetailModal);
+    document.getElementById('detail-export-btn').addEventListener('click', exportDetailCsv);
+    document.getElementById('detail-modal-overlay').addEventListener('click', e => {
+      if (e.target.id === 'detail-modal-overlay') closeDetailModal();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetailModal(); });
+    document.getElementById('recompute-now-btn').addEventListener('click', recomputeProjectionNow);
+    document.getElementById('recompute-later-btn').addEventListener('click', () => {
+      document.getElementById('cfg-recompute-notice').classList.add('hidden');
+    });
+
     document.getElementById('save-notes-btn').addEventListener('click', async () => {
       state.config.coachNotes = document.getElementById('cfg-coach-notes').value;
       await persistConfig();
@@ -3958,17 +4468,22 @@ function computeProjection(config, data) {
 
     document.getElementById('save-config-btn').addEventListener('click', async () => {
       const cfg = state.config;
-      cfg.inflationRate = parseFloat(document.getElementById('cfg-inflation').value) || 0;
+      const keyBefore = currentBasisKey();
+      cfg.inflationRate = (parseFloat(document.getElementById('cfg-inflation').value) || 0) / 100;
       cfg.projectionRates = {
-        min: parseFloat(document.getElementById('cfg-rate-min').value) || 0,
-        max: parseFloat(document.getElementById('cfg-rate-max').value) || 0,
-        upside: parseFloat(document.getElementById('cfg-rate-upside').value) || 0,
+        mode: document.getElementById('cfg-market-mode').value,
+        expectedReturn: (parseFloat(document.getElementById('cfg-expected-return').value) || 0) / 100,
+        volatility: Math.max(0, parseFloat(document.getElementById('cfg-volatility').value) || 0) / 100,
       };
       cfg.coachTone = 'centered';
 
       await persistConfig();
       renderPresentation();
       showToast('Configuration saved');
+      // New assumptions: let the user choose whether to rebuild the projection
+      // now or leave it as is until the next check-in (the stale note on the
+      // dashboard stays up until it is rebuilt).
+      document.getElementById('cfg-recompute-notice').classList.toggle('hidden', currentBasisKey() === keyBefore);
     });
   }
 
@@ -3996,7 +4511,13 @@ function computeProjection(config, data) {
       const res = await fetch('/waypoint-app/api/coach-analyses');
       if (!res.ok) return;
       const analyses = await res.json();
-      state.latestAnalysis = analyses && analyses.length ? analyses[analyses.length - 1] : null;
+      // Only an analysis written on the same assumptions as the projection on
+      // screen belongs next to it. Older ones (including any from before
+      // assumptions were recorded) stay saved but are not shown as current.
+      const key = state.projection && state.projection.basisKey;
+      const matching = (analyses || []).filter(a => a.basisKey && a.basisKey === key);
+      state.latestAnalysis = matching.length ? matching[matching.length - 1] : null;
+      state.hasEarlierAnalyses = !state.latestAnalysis && !!(analyses && analyses.length);
     } catch (e) {
       // coach analyses optional — app works without them
     }
@@ -4004,6 +4525,19 @@ function computeProjection(config, data) {
 
   function renderCoachPanel(projection, config) {
     const analysis = state.latestAnalysis;
+
+    // Analyses exist but none match today's assumptions: say so instead of
+    // showing a read written on different numbers.
+    if (!analysis && state.hasEarlierAnalyses) {
+      document.getElementById('coach-name-heading').textContent =
+        'Your assumptions changed. Run the coach for an updated read.';
+      const body = document.querySelector('.coach-body');
+      if (body) body.style.display = 'none';
+      document.querySelectorAll('.coach-col-recs .coach-rec').forEach(r => r.remove());
+      const link = document.querySelector('.coach-scenarios-link');
+      if (link) { link.style.pointerEvents = 'none'; link.style.opacity = '0.5'; link.onclick = e => e.preventDefault(); }
+      return;
+    }
 
     // Render verdict/heading
     if (analysis && analysis.verdict) {

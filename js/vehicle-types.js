@@ -13,7 +13,7 @@
 //                            and example product names people will recognize it
 //                            by (shown in the legend's Examples column)
 //   growth                   how the projection moves its balance:
-//                              'market'        compounds at the market-rate range
+//                              'market'        compounds at simulated market returns
 //                                              (simulated) plus contributions
 //                              'contributions' balance plus contributions only,
 //                                              no growth (linear)
@@ -50,7 +50,7 @@
       moneyRole: 'building',
       needsCheckIn: true,
       help: 'Money invested in the market. It can grow, and it can dip.',
-      coachNote: 'Grown at the assumed market range from the profile, plus recurring contributions. This is the only kind of account modeled with market growth.',
+      coachNote: 'Grown with simulated market returns (the profile says how they were produced), plus recurring contributions. This is the only kind of account modeled with market growth.',
     },
     {
       id: 'cash_value_life',

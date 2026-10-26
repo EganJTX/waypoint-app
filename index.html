@@ -99,15 +99,20 @@
       <div class="card panel">
         <div class="panel-head">
           <div class="panel-title">Retirement Projection</div>
-          <div class="legend-inline">
-            <span><span class="dot solid"></span>Median (250 simulations)</span>
-            <span><span class="swatch-band"></span>Middle 60% of outcomes</span>
-            <span><span class="dot dashed"></span>Target</span>
-          </div>
+          <button class="btn-secondary hidden" id="detail-btn" type="button">Detail</button>
+        </div>
+        <div class="stale-note hidden" id="projection-stale-note">
+          <span>This projection is out of date.</span>
+          <button class="btn-secondary" id="stale-update-btn" type="button">Update now</button>
         </div>
         <div class="chart-wrap" id="chart-wrap">
           <canvas id="projection-chart"></canvas>
           <div class="chart-callout hidden" id="chart-callout"></div>
+        </div>
+        <div class="legend-inline legend-below">
+          <span><span class="dot solid"></span>Median (1,000 simulations)</span>
+          <span><span class="swatch-band"></span>Middle 60% of outcomes</span>
+          <span><span class="dot dashed"></span>Target</span>
         </div>
       </div>
 
@@ -363,26 +368,32 @@
 
           <div class="advanced-section">
             <div class="advanced-section-title-row">
-              <div class="advanced-section-title">Projection Rates</div>
-              <span class="th-help" tabindex="0" aria-label="What do these rates mean?"><span class="th-tip th-tip-wide">
-                <strong>Minimum annual rate</strong> — the low end of the random walk used for market vehicles (401(k), IRA, brokerage, etc.) each simulated year. A worse-than-usual year in your plan won't go below this.<br/>
-                <strong>Maximum annual rate</strong> — the high end of that same random walk. A better-than-usual year won't go above this. Each simulated year draws a rate somewhere between Min and Max — not one fixed rate for the whole projection.<br/>
-                <strong>Upside rate</strong> — a separate, single flat rate (no year-to-year randomness) used only for the "if performance runs ahead of plan" reference line — not part of the Min/Max random walk. Nothing forces it above Max; for it to genuinely read as "upside," it should be set higher than Max, but the app won't stop you from setting it lower.
+              <div class="advanced-section-title">Market assumptions</div>
+              <span class="th-help" tabindex="0" aria-label="What do these assumptions mean?"><span class="th-tip th-tip-wide">
+                <strong>Historical US markets</strong> — the default. Each simulated future replays real US years (1928 to 2025, a 60/40 mix of stocks and bonds) in 5-year stretches, so good and bad decades show up the way they actually did.<br/>
+                <strong>My own assumptions</strong> — you set the average yearly return and how much a typical year swings from that average. A larger swing means a wider spread of outcomes. Only market accounts (401(k), IRA, brokerage) use these.
               </span></span>
             </div>
-            <p class="util-panel-desc">Single random-path projection between Min and Max, drawn per vehicle per year (not multi-trial Monte Carlo). Upside is shown as a secondary "ahead of plan" line.</p>
+            <p class="util-panel-desc">How the market accounts are simulated. Every projection runs 1,000 possible futures and shows the middle outcome with a band around it.</p>
             <div class="form-grid">
               <div class="form-field">
-                <label>Minimum annual rate</label>
-                <input type="number" step="0.001" id="cfg-rate-min" />
+                <label>Simulate market returns using</label>
+                <select id="cfg-market-mode">
+                  <option value="history">Historical US markets</option>
+                  <option value="custom">My own assumptions</option>
+                </select>
+                <div class="form-hint" id="cfg-market-history-hint"></div>
+              </div>
+            </div>
+            <div class="form-grid hidden" id="cfg-market-custom-fields">
+              <div class="form-field">
+                <label>Expected yearly return (%)</label>
+                <input type="number" step="0.1" id="cfg-expected-return" />
               </div>
               <div class="form-field">
-                <label>Maximum annual rate</label>
-                <input type="number" step="0.001" id="cfg-rate-max" />
-              </div>
-              <div class="form-field">
-                <label>Upside rate</label>
-                <input type="number" step="0.001" id="cfg-rate-upside" />
+                <label>Yearly ups and downs (%)</label>
+                <input type="number" step="0.1" min="0" id="cfg-volatility" />
+                <div class="form-hint">How far a typical year lands from the average.</div>
               </div>
             </div>
           </div>
@@ -391,8 +402,8 @@
             <div class="advanced-section-title">Inflation</div>
             <div class="form-grid">
               <div class="form-field">
-                <label>Assumed inflation rate</label>
-                <input type="number" step="0.001" id="cfg-inflation" />
+                <label>Assumed inflation rate (%)</label>
+                <input type="number" step="0.1" id="cfg-inflation" />
                 <div class="form-hint">Used to show today's-dollars equivalent alongside the nominal figure.</div>
               </div>
             </div>
@@ -401,12 +412,49 @@
           <div class="actions-row">
             <button class="btn-primary" id="save-config-btn">Save configuration</button>
           </div>
+          <div class="recompute-notice hidden" id="cfg-recompute-notice">
+            <p>Your assumptions changed. Update the projection now, or wait until your next check-in?</p>
+            <div class="actions-row">
+              <button class="btn-primary" id="recompute-now-btn" type="button">Update now</button>
+              <button class="btn-secondary" id="recompute-later-btn" type="button">Wait for check-in</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
   </div>
 </main>
+
+<!-- Detail modal: where the projected number comes from, year by year. -->
+<div class="modal-overlay hidden" id="detail-modal-overlay">
+  <div class="modal-card detail-card" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <div class="detail-head">
+      <div>
+        <div class="detail-title" id="detail-title">Detail</div>
+      </div>
+      <button class="detail-close" id="detail-close-btn" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="detail-cards">
+      <div class="detail-stat"><div class="detail-stat-label">Annual Avg Market Rate</div><div class="detail-stat-value" id="detail-avg"></div><div class="detail-stat-note">Average yearly market return across all 1,000 simulations.</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Annual Compound Median Rate</div><div class="detail-stat-value" id="detail-compound"></div><div class="detail-stat-note">Yearly market return realized by the median simulation.</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Annual Volatility Cost</div><div class="detail-stat-value" id="detail-cost"></div><div class="detail-stat-note">The discount market volatility puts on the median, since down years do happen.</div></div>
+    </div>
+    <div class="detail-tagline" id="detail-tagline"></div>
+    <div class="detail-table-head">
+      <div class="detail-table-title">Detail By Year</div>
+      <button class="btn-primary" id="detail-export-btn" type="button">Export CSV</button>
+    </div>
+    <div class="detail-table-wrap">
+      <table class="detail-table">
+        <thead><tr>
+          <th>Year</th><th>Age</th><th class="num">Added this year</th><th class="num median">Median balance</th><th class="num gap">Downside balance</th><th class="num">Upside balance</th>
+        </tr></thead>
+        <tbody id="detail-rows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
 <!-- Single-question edit modal — opened by clicking a highlighted word in
      the plan paragraph. -->
@@ -427,6 +475,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="js/vehicle-types.js"></script>
+<script src="js/historical-returns.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

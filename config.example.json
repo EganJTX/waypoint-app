@@ -8,11 +8,9 @@
   },
   "targetRetirementAge": 0,
   "projectionRates": {
-    "min": 0.04,
-    "max": 0.10,
-    "upside": 0.08
+    "mode": "history"
   },
-  "inflationRate": 0.025,
+  "inflationRate": 0.031,
   "coachTone": "centered",
   "coachNotes": ""
 }

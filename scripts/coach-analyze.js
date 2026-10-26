@@ -22,6 +22,7 @@ How to reason:
 - **Market context**: Use current market conditions to inform *timing* and *opportunity*, never to override strategy. Compare to historical ranges (not recency bias). Example: "VIX elevated — historically this is when entry points have worked" vs "Markets down, move to cash."
 - Frame recommendations around opportunities and optimal sequencing, not raiding checking/savings unnecessarily.
 - Keep recommendations grounded. Acknowledge advisor priorities (e.g., 401k match first, then a tax-deferred account).
+- The profile says how the projection was produced (simulated futures drawn from real US market history, or the user's own assumptions). Let that set your confidence. A history-based range is realistic, so describe the downside case as a plausible bad stretch the plan should survive, not a worst case, and do not call the numbers random or made up. It is also not a forecast: say "history suggests", not "markets will". Do not quote a specific market return beyond what the profile states.
 - Respect household risk tolerance. When spouses aren't aligned on a move, acknowledge it and find lower-risk alternatives.
 
 How the projection treats each kind of account (this list comes straight from the app, so it is exact). The projection is a simplified model. Use your own knowledge of how each kind of vehicle really behaves, never say an account earns market returns unless the list says so, and when it matters to the advice, say plainly that the projection is conservative for it instead of inventing a specific rate.
@@ -34,7 +35,7 @@ Projected balances are as of the target retirement age. Never attach them to an 
 Writing style:
 - Never use an em dash. Restructure the sentence into two sentences, a comma, or parentheses instead. Example: instead of "You're ahead — the goal is met," write "You're ahead. The goal is met."
 - Never use semicolons. Write two sentences instead.
-- Lead with plain language, keep technical terms as optional secondary context. Instead of "the p20 (downside case)" write "the downside case (from running 250 simulations)" or just "the downside case." Use plain terms: "downside case" not "p20", "middle outcome" not "median", "simulations" not "Monte Carlo". Technical jargon is optional context, never the primary framing.
+- Lead with plain language, keep technical terms as optional secondary context. Instead of "the p20 (downside case)" write "the downside case (from running 1,000 simulations)" or just "the downside case." Use plain terms: "downside case" not "p20", "middle outcome" not "median", "simulations" not "Monte Carlo". Technical jargon is optional context, never the primary framing.
 - Always pair account names with their type: "your Fidelity 401k investment account" not just "your Fidelity 401k".
 - Soften recommendations: "consider redirecting," "once your buffer covers 3-6 months," "gradually move." This is partnership, not orders.
 
@@ -57,7 +58,7 @@ Output format — respond with ONLY a JSON object, no prose outside the JSON, in
 }
 `.trim();
 
-function buildCoachPrompt({ profileText, projectionSummary, userConcerns, recentAnalyses, advisorNotes, portfolioBreakdown, marketContext }) {
+function buildCoachPrompt({ profileText, projectionSummary, userConcerns, recentAnalyses, advisorNotes, portfolioBreakdown, marketContext, standsAlone }) {
   const parts = [COACH_PERSONA, ''];
 
   parts.push(`Assessing retirement readiness based on current projection and market context.`);
@@ -82,8 +83,10 @@ function buildCoachPrompt({ profileText, projectionSummary, userConcerns, recent
       parts.push(`  Verdict: ${a.verdict}`);
       parts.push(`  Top recommendation: ${a.recommendations[0]?.title || 'N/A'}`);
     });
+  } else if (standsAlone) {
+    parts.push('', 'RECENT COACHING HISTORY: not used. The user is on their own market assumptions, so earlier advice was written on different numbers and does not apply. Assess the plan as it stands today and do not refer to earlier advice.');
   } else {
-    parts.push('', 'RECENT COACHING HISTORY: none yet — this is the first analysis.');
+    parts.push('', 'RECENT COACHING HISTORY: none yet on these assumptions. Do not refer to earlier advice.');
   }
 
   if (projectionSummary) {
@@ -120,9 +123,14 @@ function runCoachAnalysis({
       config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     } catch (e) { /* no config yet — profile stays empty */ }
 
-    const profileText = renderCoachProfile(config);
+    const basis = { key: projectionData.basisKey, mode: projectionData.basis && projectionData.basis.mode };
+    if (!basis.key || !basis.mode) {
+      return resolve({ ok: false, status: 409, error: 'This projection was built before Waypoint recorded its assumptions. Update the projection (Configuration, Advanced) or log a check-in, then run the coach again.' });
+    }
+
+    const profileText = renderCoachProfile(config, projectionData);
     const advisorNotes = config.coachNotes || '';
-    const recentAnalyses = recentAnalysesFor(analysesPath);
+    const recentAnalyses = recentAnalysesFor(analysesPath, basis);
 
     // Build projection summary from the data
     const projectionSummary = buildProjectionSummary(projectionData);
@@ -142,7 +150,8 @@ function runCoachAnalysis({
       recentAnalyses,
       advisorNotes,
       portfolioBreakdown,
-      marketContext
+      marketContext,
+      standsAlone: basis.mode !== 'history'
     });
 
     // Same Windows shell:true / --tools "" handling as trim-app's coach-analyze.js
@@ -275,6 +284,10 @@ function runCoachAnalysis({
           reasoning: String(r.reasoning || '').trim()
         })),
         fullReport: String(parsed.fullReport || '').trim(),
+        // The footing the numbers in this analysis were built on, so it is only
+        // ever shown or reused alongside a projection on the same footing.
+        basisKey: basis.key,
+        basisMode: basis.mode,
         generatedAt: now.toISOString()
       };
 
@@ -305,6 +318,8 @@ function buildProjectionSummary(projection) {
     const p20 = projection.monteCarlo.p20 && projection.monteCarlo.p20[projection.yearsToRetirement];
     if (median) lines.push(`Median projection at retirement: $${Math.round(median).toLocaleString()}`);
     if (p20) lines.push(`Downside (p20) at retirement: $${Math.round(p20).toLocaleString()}`);
+    const p80 = projection.monteCarlo.p80 && projection.monteCarlo.p80[projection.yearsToRetirement];
+    if (p80) lines.push(`Upside (p80) at retirement: $${Math.round(p80).toLocaleString()}`);
   }
   return lines.join('\n');
 }

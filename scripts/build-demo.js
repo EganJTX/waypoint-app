@@ -30,6 +30,7 @@ const projectionCode = serverSrc.slice(start, end);
 
 const calculatorSrc = read('js/calculator.js');
 const vehicleTypesSrc = read('js/vehicle-types.js');
+const historicalReturnsSrc = read('js/historical-returns.js');
 
 const fixtures = {
   config: JSON.parse(read('demo-src/config.json')),
@@ -63,9 +64,18 @@ const shim = `
   window.VehicleTypes = VehicleTypes;
   const typesForCalculator = VehicleTypes; // calculator.js declares its own VehicleTypes, so hand it this alias
 
+  // The market history the simulation draws from (js/historical-returns.js).
+  const historyForCalculator = (function () {
+    const module = { exports: {} };
+    ${safeScript(historicalReturnsSrc)}
+    return module.exports;
+  })();
+  window.HistoricalReturns = historyForCalculator; // the Advanced panel shows its summary numbers
+
   const calculator = (function () {
     const module = { exports: {} };
-    const require = () => typesForCalculator; // calculator.js's only require is the types table
+    // calculator.js requires the types table and the market history
+    const require = name => (name.includes('historical-returns') ? historyForCalculator : typesForCalculator);
     ${safeScript(calculatorSrc)}
     return module.exports;
   })();

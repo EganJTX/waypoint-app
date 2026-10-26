@@ -132,13 +132,13 @@ function computeProjection(config, data) {
     ? Math.max(0, targetRetirementAge - currentAge)
     : 0;
 
-  const rates = config.projectionRates || { min: 0.04, max: 0.10, upside: 0.08 };
+  const rates = config.projectionRates || { mode: 'history' };
 
-  const inflationRate = config.inflationRate != null ? config.inflationRate : 0.025;
+  const inflationRate = config.inflationRate != null ? config.inflationRate : calculator.DEFAULT_INFLATION;
 
   // Run Monte Carlo for a wide horizon first to find the crossing using median (not old projectPortfolio)
   const initialHorizon = currentAge != null ? Math.min(100 - currentAge, 60) : 60;
-  const monteCarloForSolving = calculator.runMonteCarlo(data.vehicles, initialHorizon, rates, 250, 25);
+  const monteCarloForSolving = calculator.runMonteCarlo(data.vehicles, initialHorizon, rates, calculator.TRIAL_COUNT, 25, yearsToRetirement);
 
   // Find when median crosses the destination number
   let solvedYears = null;
@@ -171,7 +171,7 @@ function computeProjection(config, data) {
   const currentYear = new Date().getFullYear();
   // If we need more years than our initial horizon, run again with the full horizon
   const monteCarlo = horizonYears > initialHorizon
-    ? calculator.runMonteCarlo(data.vehicles, horizonYears, rates, 250, 25)
+    ? calculator.runMonteCarlo(data.vehicles, horizonYears, rates, calculator.TRIAL_COUNT, 25, yearsToRetirement)
     : monteCarloForSolving;
 
   const series = [];
@@ -203,7 +203,7 @@ function computeProjection(config, data) {
       let balance = startBalance;
       const contrib = v.contribution && (v.period === 'Monthly' ? v.contribution * 12 : v.period === 'Annually' ? v.contribution : 0) || 0;
       for (let y = 0; y < yearsToRetirement; y++) {
-        const rate = calculator.seededRate ? calculator.seededRate(`${v.id}:${y}`, rates.min, rates.max) : (rates.min + rates.max) / 2;
+        const rate = calculator.steadyRate(rates);
         balance = balance * (1 + rate) + contrib;
       }
       projectedBalance = balance;
@@ -330,6 +330,11 @@ function computeProjection(config, data) {
 
   return {
     computedAt: new Date().toISOString(),
+    // What these numbers were built on, so the coach and the UI can tell
+    // when a later change to the assumptions has made them out of date.
+    basisKey: calculator.basisKey(rates, inflationRate),
+    basis: calculator.describeBasis(rates),
+    inflationRate,
     currentAge,
     yearsToRetirement,
     targetRetirementAge,
