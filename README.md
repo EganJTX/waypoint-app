@@ -4,7 +4,7 @@ A local, single-user retirement tracker with an AI coach. Waypoint turns the acc
 
 > **You have time. Let's use it.**
 
-**Try it without installing anything:** open [`demo.html`](demo.html) in a browser. It's a self-contained walkthrough with a fictional persona (John Doe) and a real coach insight generated on his data. See [The demo](#the-demo) for what it can and can't do.
+**Try it without installing anything:** open [`demo.html`](demo.html) in a browser. It's a self-contained walkthrough with a fictional persona (John Doe) and a sample coach insight written for his data. See [The demo](#the-demo) for what it can and can't do.
 
 ## What this is (and isn't)
 
@@ -32,9 +32,12 @@ The Coach needs the `claude` CLI installed and signed in on your machine. Withou
 
 ## How the projection works
 
-- **Simulation, not a guess.** The chart shows the median of 1,000 simulated paths, plus a band for the middle 60% of outcomes. The simulation is seeded, so the same data always produces the same numbers.
-- **Recomputed at check-in.** The projection is calculated when you log a check-in and then saved, so Waypoint can later compare what it predicted against what actually happened. Plain page loads don't recompute it.
-- **Trajectory.** *Ahead*, *On Track*, or *Worth Review* is based on the age your projection first reaches your target number, compared with the retirement age you want. It's a prompt to look closer, not a verdict.
+- **Simulation, not a guess.** The chart shows the median of 1,000 simulated futures, plus a band for the middle 60% of outcomes (the 20th to 80th percentile). The simulation is seeded, so the same data always produces the same numbers.
+- **Built on real US market history.** Each simulated year draws from 98 years of actual US returns (1928 to 2025, a 60/40 mix of stocks and bonds), in 5-year stretches so good and bad decades cluster the way they do in life. Inflation defaults to 3.1%, the average over the same years, and is used only to restate future dollars as today's purchasing power. In Configuration, Advanced you can switch to your own average return and yearly ups and downs instead.
+- **Recomputed at check-in, or when you ask.** The projection is calculated when you log a check-in and then saved, so Waypoint can later compare what it predicted against what actually happened. Plain page loads don't recompute it. If you change your market assumptions, Waypoint marks the saved projection as out of date and lets you update it now or wait for the next check-in.
+- **Detail.** The Detail button on the projection graph opens the numbers behind the headline: the average market return, the compounded return of the median simulation, what market ups and downs cost, and a year-by-year table you can export as CSV. The last row matches the headline number.
+- **Trajectory.** *Ahead*, *On Track*, or *Worth Review* is based on the age your projection first reaches your target number, compared with the retirement age you want. *On Track* means within a year of it. It's a prompt to look closer, not a verdict.
+- **The Coach reads the same basis.** Each saved projection and Coach analysis is stamped with the assumptions it was built on. The Coach is told how the numbers were produced, and it only builds on earlier advice written on the same US-history basis. With your own assumptions, each analysis stands alone.
 - **Every account has a Type.** You pick one on the Data tab, grouped under a parent category, with plain-language help for each. The Type decides how the projection treats the account. Here is the full table (it lives in one place, `js/vehicle-types.js`, and everything else reads from it, including the coach):
 
 | Group | Type | Examples | How the projection treats it | Counts toward retirement |
@@ -50,6 +53,12 @@ The Coach needs the `claude` CLI installed and signed in on your machine. Withou
 - **Protection-only insurance.** Term life is your family's safety net. It holds no cash value, its premium is a cost and not savings, and it's left out of the projection. Whole life and similar policies build cash value and are included.
 - **Adding a new kind of account** (a 529 plan, an HSA, ...) means adding one row to the table in `js/vehicle-types.js`. Nothing else needs to change.
 
+## Where the market numbers come from
+
+Yearly returns for the S&P 500 (with dividends) and the 10-year US Treasury, plus CPI inflation, come from Aswath Damodaran's public "Historical Returns on Stocks, Bonds and Bills" data (NYU Stern), 1928 to 2025. They are stored in `js/historical-returns.js` and blended 60/40, rebalanced yearly.
+
+Known limits: the data is US only, and the US had a strong century. History describes what happened, not what will, and today's valuations suggest returns could run lower. The data is annual, so movement within a year is not modeled.
+
 ## Data and privacy
 
 `config.json`, `data.json`, and `coachAnalyses.json` are gitignored. Once you fill them in with your real information, none of it is tracked by git or leaves your machine, with one exception: when you click **Run a new analysis**, the Coach sends your profile, your account balances and projection, your notes, and your recent analyses to Anthropic through the Claude Code CLI, under your own account. If you don't want that, don't use the Coach.
@@ -64,7 +73,7 @@ Beyond that, Waypoint is a small Express server (`server.js`) doing local file r
 
 - the real Waypoint interface, running entirely in your browser on fictional data (**John Doe**, 42, with a 401k, whole life, savings and a college fund),
 - the same projection math as the real app, so the numbers and charts behave the same way,
-- a real coach analysis, generated once by running the actual Coach on John's data and saved into the file.
+- a sample coach analysis for John, saved into the file. It was first generated by running the actual Coach, then updated by hand to match his numbers when the projection changed, so it is not a live run.
 
 What it **can't** do: **Run a new analysis does not work in the demo.** The Coach runs a real, local Claude Code analysis, which needs the full app running on your own machine. Clicking Run shows a message saying so. Edits you make in the demo (check-ins, settings) are kept only in your browser, and **Reset Demo Data to Original State** puts John back as he was.
 
@@ -83,6 +92,7 @@ The build inlines the app's own `index.html`, CSS, and JavaScript and uses the f
 | `index.html`, `css/`, `js/app.js` | The interface (Presentation, Data, Configuration) |
 | `js/vehicle-types.js` | The account types table: one place that defines how every kind of account is treated |
 | `js/calculator.js` | The projection engine: simulation, percentiles, inflation |
+| `js/historical-returns.js` | The US market history the simulation draws from |
 | `server.js` | Local API and persistence |
 | `scripts/coach-analyze.js`, `scripts/coach-shared.js` | The Coach: prompt, Claude CLI call, validation, history |
 | `scripts/build-demo.js`, `demo-src/` | Builds `demo.html` from fictional fixtures |
